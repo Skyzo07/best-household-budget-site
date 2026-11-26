@@ -1,0 +1,206 @@
+// Hearth & Home Budget — views: dashboard, transactions, budgets,
+// savings goals and insights. Each view renders from state + current month.
+import { CATEGORIES, categoryById, money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, lastMonths, shiftMonth } from './data.js';
+import { drawDonut, drawBars, drawTrend, ringSVG } from './charts.js';
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function txRow(t) {
+  const cat = categoryById(t.category);
+  const sign = t.kind === 'income' ? '+' : '−';
+  return '<li><span class="tx-ico" style="background:' + cat.color + '22;color:' + cat.color + '">' + cat.icon + '</span>'
+    + '<span class="tx-main"><b>' + esc(t.description) + '</b><span>' + fmtDate(t.date) + ' · ' + esc(cat.label) + (t.note ? ' · ' + esc(t.note) : '') + '</span></span>'
+    + '<span class="tx-amt ' + (t.kind === 'income' ? 'in' : 'out') + '">' + sign + money(t.amount) + '</span></li>';
+}
+
+function budgetBars(state, key) {
+  const spend = categorySpend(state, key);
+  const rows = CATEGORIES.filter((c) => c.budget > 0).map((c) => {
+    const spent = spend[c.id] || 0;
+    const pct = c.budget > 0 ? (spent / c.budget) * 100 : 0;
+    const cls = pct > 100 ? 'over' : pct > 85 ? 'amber' : '';
+    const pill = pct > 100 ? '<span class="pill over">Over by ' + money(spent - c.budget) + '</span>'
+      : pct > 85 ? '<span class="pill warn">Almost there</span>' : '<span class="pill">On track</span>';
+    return '<div class="bar-row"><div class="bar-top"><span><span class="cat-dot" style="background:' + c.color + '"></span><b>' + esc(c.label) + '</b> — ' + money(spent) + ' of ' + money(c.budget) + '</span>' + pill + '</div>'
+      + '<div class="bar"><i class="' + cls + '" style="width:' + Math.min(100, pct).toFixed(1) + '%"></i></div></div>';
+  }).join('');
+  return rows;
+}
+
+export function renderDashboard(state, root) {
+  const key = state.currentMonth;
+  const t = monthTotals(state, key);
+  const prev = monthTotals(state, shiftMonth(key, -1));
+  const spend = categorySpend(state, key);
+  const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+  const over = CATEGORIES.filter((c) => c.budget > 0 && (spend[c.id] || 0) > c.budget);
+  const incomeDelta = prev.income ? ((t.income - prev.income) / prev.income) * 100 : 0;
+  const spendDelta = prev.expense ? ((t.expense - prev.expense) / prev.expense) * 100 : 0;
+  const recent = state.transactions.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+  const slices = CATEGORIES.filter((c) => c.budget > 0 && (spend[c.id] || 0) > 0)
+    .map((c) => ({ label: c.label, value: spend[c.id], color: c.color }))
+    .sort((a, b) => b.value - a.value);
+  const safe = Math.max(0, t.income - t.expense);
+  const goalTotal = state.goals.reduce((a, g) => a + g.saved, 0);
+  const goalTarget = state.goals.reduce((a, g) => a + g.target, 0);
+  // 50/30/20 rule: needs vs wants vs savings, as shares of income.
+  const NEEDS = ['housing', 'utilities', 'transport', 'groceries', 'health', 'kids'];
+  const WANTS = ['dining', 'fun', 'shopping', 'other'];
+  const needs = NEEDS.reduce((a, id) => a + (spend[id] || 0), 0);
+  const wants = WANTS.reduce((a, id) => a + (spend[id] || 0), 0);
+  const ruleRows = [
+    { label: 'Needs', sub: 'rent, bills, food, transport, health, school', value: needs, target: 50, color: '#1d6b4f' },
+    { label: 'Wants', sub: 'eating out, fun, shopping', value: wants, target: 30, color: '#d9a441' },
+    { label: 'Savings', sub: 'what stayed in the household', value: Math.max(0, t.saved), target: 20, color: '#2b5f8a' },
+  ].map((r) => {
+    const pct = t.income ? (r.value / t.income) * 100 : 0;
+    const over = pct > r.target;
+    return '<div class="bar-row"><div class="bar-top"><span><b>' + r.label + '</b> <span class="muted">· ' + r.sub + '</span></span><span>' + money(r.value) + ' · ' + pct.toFixed(0) + '% of income <span class="pill ' + (over ? 'warn' : '') + '">target ' + r.target + '%</span></span></div>'
+      + '<div class="bar"><i style="width:' + Math.min(100, pct).toFixed(1) + '%;background:' + r.color + '"></i></div></div>';
+  }).join('');
+
+  root.innerHTML =
+    (state.sample ? '<div class="sample-note"><strong>Sample household loaded</strong> — the Hartono family’s November budget. Edit or delete anything, or press <strong>Reset sample data</strong> to start clean.</div>' : '')
+    + '<div class="page-head"><div><h1>Your month at a glance</h1><p class="muted">' + monthLabel(key) + ' · Two incomes, two kids, one plan. Here is where the household stands right now.</p></div>'
+    + '<div><button class="btn ghost" id="btn-add-tx">+ Add transaction</button> <button class="btn plain" id="btn-export">Export CSV</button> <button class="btn plain" id="btn-reset">Reset sample data</button></div></div>'
+    + (over.length ? '<div class="alert" role="alert"><strong>Heads up:</strong> ' + over.map((c) => esc(c.label)).join(', ') + ' ' + (over.length > 1 ? 'are' : 'is') + ' over budget this month. See Budgets for the detail.</div>'
+      : '<div class="alert ok"><strong>All budgets on track.</strong> No category is over its monthly limit.</div>')
+    + '<div class="grid kpis">'
+    + '<div class="card kpi good"><div class="kpi-label">Income</div><div class="kpi-value num">' + money(t.income) + '</div><div class="kpi-sub">' + (incomeDelta >= 0 ? '<span class="delta-up">▲ ' + incomeDelta.toFixed(1) + '%</span>' : '<span class="delta-down">▼ ' + Math.abs(incomeDelta).toFixed(1) + '%</span>') + ' vs ' + monthLabel(shiftMonth(key, -1)) + '</div></div>'
+    + '<div class="card kpi ' + (t.expense > t.income ? 'warn' : '') + '"><div class="kpi-label">Spent</div><div class="kpi-value num">' + money(t.expense) + '</div><div class="kpi-sub">' + (spendDelta <= 0 ? '<span class="delta-up">▼ ' + Math.abs(spendDelta).toFixed(1) + '%</span> vs last month' : '<span class="delta-down">▲ ' + spendDelta.toFixed(1) + '%</span> vs last month') + ' · budget ' + money(totalBudget) + '</div></div>'
+    + '<div class="card kpi good"><div class="kpi-label">Saved this month</div><div class="kpi-value num">' + money(t.saved) + '</div><div class="kpi-sub">' + (t.income ? (t.saved / t.income * 100).toFixed(1) + '% savings rate' : 'No income recorded') + ' · target 20%</div></div>'
+    + '<div class="card kpi"><div class="kpi-label">Safe to spend</div><div class="kpi-value num">' + money(safe) + '</div><div class="kpi-sub">Left after spending · goals ' + money(goalTotal) + ' of ' + money(goalTarget) + '</div></div>'
+    + '</div>'
+    + '<div class="grid two" style="margin-top:16px">'
+    + '<div class="card"><h2>Where the money went <a href="#/transactions">All transactions →</a></h2><div class="chart-wrap"><canvas id="chart-donut" class="chart" height="150" aria-label="Spending by category chart"></canvas></div><ul class="legend">'
+    + slices.map((s) => '<li><span class="cat-dot" style="background:' + s.color + '"></span>' + esc(s.label) + ' — <b>' + money(s.value) + '</b> (' + (t.expense ? Math.round(s.value / t.expense * 100) : 0) + '%)</li>').join('')
+    + '</ul></div>'
+    + '<div class="card"><h2>Budget vs actual <a href="#/budgets">Manage budgets →</a></h2>' + budgetBars(state, key) + '</div>'
+    + '</div>'
+    + '<div class="card" style="margin-top:16px"><h2>The 50 / 30 / 20 check</h2><p class="muted small" style="margin-top:0">A classic household rule: about 50% of income to needs, 30% to wants, 20% to savings. Here is how ' + monthLabel(key) + ' measures up.</p>' + ruleRows
+    + '<p class="muted small">Needs are running ' + (t.income ? Math.round(needs / t.income * 100) : 0) + '% of income. If needs creep over 50%, the fix is usually a bill to renegotiate — not a smaller grocery shop.</p></div>'
+    + '<div class="grid two" style="margin-top:16px">'
+    + '<div class="card"><h2>Recent transactions <a href="#/transactions">See all →</a></h2><ul class="tx-list">' + recent.map(txRow).join('') + '</ul></div>'
+    + '<div class="card"><h2>Savings goals <a href="#/goals">All goals →</a></h2>'
+    + state.goals.map((g) => {
+        const pct = g.target ? (g.saved / g.target) * 100 : 0;
+        return '<div class="bar-row"><div class="bar-top"><span><b>' + esc(g.name) + '</b></span><span>' + money(g.saved) + ' / ' + money(g.target) + ' · ' + pct.toFixed(0) + '%</span></div><div class="bar"><i style="width:' + Math.min(100, pct).toFixed(1) + '%"></i></div></div>';
+      }).join('')
+    + '<p class="muted small">Tip: move your saved amount into a goal the day payday lands — what you don’t see, you don’t spend.</p></div>'
+    + '</div>';
+  drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
+}
+
+export function renderTransactions(state, root, filter) {
+  const key = state.currentMonth;
+  const f = filter || { q: '', cat: 'all', kind: 'all' };
+  let list = monthTransactions(state, key).slice().sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+  if (f.cat !== 'all') list = list.filter((t) => t.category === f.cat);
+  if (f.kind !== 'all') list = list.filter((t) => t.kind === f.kind);
+  if (f.q) { const q = f.q.toLowerCase(); list = list.filter((t) => (t.description + ' ' + (t.note || '')).toLowerCase().includes(q)); }
+  const t = monthTotals(state, key);
+  const catOptions = ['<option value="all">All categories</option>'].concat(CATEGORIES.map((c) => '<option value="' + c.id + '"' + (f.cat === c.id ? ' selected' : '') + '>' + esc(c.label) + '</option>')).join('');
+  root.innerHTML =
+    '<div class="page-head"><div><h1>Transactions</h1><p class="muted">' + monthLabel(key) + ' · ' + list.length + ' shown · Income ' + money(t.income) + ' · Spent ' + money(t.expense) + ' · Saved ' + money(t.saved) + '</p></div>'
+    + '<div><button class="btn primary" id="btn-add-tx">+ Add transaction</button> <button class="btn ghost" id="btn-export">Export CSV</button></div></div>'
+    + '<div class="card"><div class="toolbar"><input type="search" id="f-q" placeholder="Search transactions…" value="' + esc(f.q) + '" aria-label="Search transactions">'
+    + '<select id="f-cat" aria-label="Filter by category">' + catOptions + '</select>'
+    + '<select id="f-kind" aria-label="Filter by type"><option value="all"' + (f.kind === 'all' ? ' selected' : '') + '>Income + expenses</option><option value="income"' + (f.kind === 'income' ? ' selected' : '') + '>Income only</option><option value="expense"' + (f.kind === 'expense' ? ' selected' : '') + '>Expenses only</option></select></div>'
+    + (list.length ? '<table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="hide-m">Note</th><th class="amount">Amount</th><th></th></tr></thead><tbody>'
+      + list.map((tx) => {
+          const cat = categoryById(tx.category);
+          return '<tr><td class="num">' + fmtDate(tx.date) + '</td><td><b>' + esc(tx.description) + '</b></td><td><span class="cat-dot" style="background:' + cat.color + '"></span>' + esc(cat.label) + '</td><td class="hide-m muted">' + esc(tx.note || '—') + '</td>'
+            + '<td class="amount"><span class="' + (tx.kind === 'income' ? 'pos' : 'neg') + '">' + (tx.kind === 'income' ? '+' : '−') + money(tx.amount) + '</span></td>'
+            + '<td><button class="icon-btn" data-edit="' + tx.id + '">Edit</button> <button class="icon-btn" data-del="' + tx.id + '">Delete</button></td></tr>';
+        }).join('') + '</tbody></table>'
+      : '<p class="empty">No transactions match. Try clearing the search, or add the first one for this month.</p>')
+    + '</div>';
+}
+
+export function renderBudgets(state, root) {
+  const key = state.currentMonth;
+  const spend = categorySpend(state, key);
+  const t = monthTotals(state, key);
+  const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+  root.innerHTML =
+    '<div class="page-head"><div><h1>Monthly budgets</h1><p class="muted">Set a limit for each category for ' + monthLabel(key) + '. Budgets repeat every month — change a figure any time and it applies from this month on.</p></div>'
+    + '<div><button class="btn ghost" id="btn-add-tx">+ Add transaction</button></div></div>'
+    + '<div class="grid two-even"><div class="card"><h2>Budget vs actual</h2>' + budgetBars(state, key)
+    + '<p class="muted small">Total budgeted ' + money(totalBudget) + ' · actually spent ' + money(t.expense) + ' · ' + (totalBudget - t.expense >= 0 ? money(totalBudget - t.expense) + ' still inside the plan' : money(t.expense - totalBudget) + ' over the plan') + '.</p></div>'
+    + '<div class="card"><h2>Edit limits</h2><p class="muted small">A good starting rule: housing under 30% of income, food under 15%, and at least 20% to savings before anything else.</p>'
+    + CATEGORIES.filter((c) => c.budget > 0 || (state.budgets[c.id] || 0) > 0).map((c) => {
+        const b = state.budgets[c.id] || 0;
+        const spent = spend[c.id] || 0;
+        return '<div class="bar-row"><div class="bar-top"><span><span class="cat-dot" style="background:' + c.color + '"></span><b>' + esc(c.label) + '</b> <span class="muted">· spent ' + money(spent) + '</span></span>'
+          + '<span class="budget-edit">$<input type="number" min="0" step="10" value="' + b + '" data-budget="' + c.id + '" aria-label="Monthly budget for ' + esc(c.label) + '"> / mo</span></div></div>';
+      }).join('')
+    + '<p class="muted small">Limits save automatically as you type. Set a category to 0 to hide it from the plan.</p></div></div>';
+}
+
+export function renderGoals(state, root) {
+  const totalSaved = state.goals.reduce((a, g) => a + g.saved, 0);
+  const totalTarget = state.goals.reduce((a, g) => a + g.target, 0);
+  const pctAll = totalTarget ? Math.round(totalSaved / totalTarget * 100) : 0;
+  root.innerHTML =
+    '<div class="page-head"><div><h1>Savings goals</h1><p class="muted">Give every dollar a job before the month starts. ' + money(totalSaved) + ' saved toward ' + money(totalTarget) + ' in goals — ' + pctAll + '% of the way there.</p></div>'
+    + '<div><button class="btn primary" id="btn-add-goal">+ New goal</button></div></div>'
+    + '<div class="goal-grid">'
+    + state.goals.map((g) => {
+        const pct = g.target ? (g.saved / g.target) * 100 : 0;
+        const left = Math.max(0, g.target - g.saved);
+        const color = pct >= 100 ? '#1d6b4f' : pct >= 50 ? '#2b5f8a' : '#d9a441';
+        return '<div class="card goal-card"><h3>' + esc(g.name) + '</h3>'
+          + '<div class="goal-ring">' + ringSVG(pct, color) + '<div class="ring-label"><b>' + Math.round(pct) + '%</b><span>saved</span></div></div>'
+          + '<p class="goal-amt"><b>' + money(g.saved) + '</b> of ' + money(g.target) + '</p>'
+          + '<p class="goal-date">' + (left > 0 ? money(left) + ' to go' : 'Goal reached — well done!') + (g.date ? ' · by ' + fmtDate(g.date) : '') + '</p>'
+          + '<div class="goal-actions"><button class="btn small" data-add-goal="' + g.id + '">+ $100</button><button class="btn small ghost" data-edit-goal="' + g.id + '">Edit</button><button class="btn small danger" data-del-goal="' + g.id + '">Delete</button></div></div>';
+      }).join('')
+    + '</div>'
+    + '<div class="card" style="margin-top:16px"><h2>How to reach a goal faster</h2><p>Pick the date first, then work backwards: a $2,400 holiday in 8 months is $300 a month — less than most households spend on takeaway. Automate the transfer on payday, and round every grocery shop down to the nearest $10 and move the difference here.</p><p class="muted small">Press <strong>+ $100</strong> on a card to record a contribution, or Edit to change the target, the amount saved, or the date.</p></div>';
+}
+
+export function renderInsights(state, root) {
+  const key = state.currentMonth;
+  const keys = lastMonths(key, 6);
+  const points = keys.map((k) => {
+    const t = monthTotals(state, k);
+    const short = monthLabel(k).split(' ')[0].slice(0, 3);
+    return { label: short, income: t.income, expense: t.expense };
+  });
+  const cur = monthTotals(state, key);
+  const prev = monthTotals(state, shiftMonth(key, -1));
+  const spend = categorySpend(state, key);
+  const prevSpend = categorySpend(state, shiftMonth(key, -1));
+  const top = Object.entries(spend).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const biggestJump = Object.entries(spend)
+    .map(([id, v]) => ({ id, delta: v - (prevSpend[id] || 0) }))
+    .sort((a, b) => b.delta - a.delta)[0];
+  const tips = [];
+  if (cur.saved < cur.income * 0.2 && cur.income > 0) tips.push({ cls: 'bad', text: '<strong>Savings rate ' + (cur.income ? (cur.saved / cur.income * 100).toFixed(1) : '0') + '% — below the 20% target.</strong> The quickest win is usually dining out: this month it is ' + money(spend.dining || 0) + '. One home-cooked swap a week frees roughly $50 a month.' });
+  else tips.push({ cls: 'good', text: '<strong>Savings rate on target.</strong> You saved ' + (cur.income ? (cur.saved / cur.income * 100).toFixed(1) : '0') + '% of income this month — at or above the 20% rule of thumb. Keep the habit.' });
+  if (biggestJump && biggestJump.delta > 30) tips.push({ cls: '', text: '<strong>' + esc(categoryById(biggestJump.id).label) + ' jumped ' + money(biggestJump.delta) + ' vs last month.</strong> Check whether it was a one-off (a bill, a repair) or a new habit — one-offs need no action, habits need a new limit.' });
+  const groceryAvg = keys.slice(0, 5).reduce((a, k) => a + (categorySpend(state, k).groceries || 0), 0) / 5;
+  tips.push({ cls: '', text: '<strong>Groceries average ' + money(groceryAvg) + ' a month</strong> over the last five months. A weekly meal plan and one big shop instead of daily top-ups typically cuts this by 8–12%.' });
+  tips.push({ cls: 'good', text: '<strong>Housing is ' + (cur.income ? Math.round((spend.housing || 0) / cur.income * 100) : 0) + '% of income.</strong> Under 30% leaves room for savings — this household is inside the healthy range.' });
+
+  root.innerHTML =
+    '<div class="page-head"><div><h1>Insights &amp; reports</h1><p class="muted">Six months of your household’s money, compared. Spotting the pattern is half the saving.</p></div>'
+    + '<div><button class="btn ghost" id="btn-export">Export CSV</button></div></div>'
+    + '<div class="card"><h2>Income vs spending — last 6 months</h2><div class="chart-wrap"><canvas id="chart-trend" class="chart" height="280"></canvas></div>'
+    + '<p class="muted small">Green bars are income, gold bars are spending, the red line is what stayed saved each month.</p></div>'
+    + '<div class="grid two" style="margin-top:16px"><div class="card"><h2>Biggest spending this month</h2>'
+    + (top.length ? '<canvas id="chart-top" class="chart" height="200" style="margin-top:8px"></canvas>' : '<p class="empty">No spending recorded this month yet.</p>')
+    + '<p class="muted small">Housing is a fixed cost — the categories you can actually move are the ones below it.</p></div>'
+    + '<div class="card"><h2>What to do next</h2>' + tips.map((t) => '<div class="tip ' + t.cls + '">' + t.text + '</div>').join('')
+    + '<p class="muted small">Month over month: income ' + (prev.income ? ((cur.income - prev.income) / prev.income * 100).toFixed(1) : '0') + '% · spending ' + (prev.expense ? ((cur.expense - prev.expense) / prev.expense * 100).toFixed(1) : '0') + '% vs ' + monthLabel(shiftMonth(key, -1)) + '.</p></div></div>';
+  drawTrend(root.querySelector('#chart-trend'), points);
+  const topCanvas = root.querySelector('#chart-top');
+  if (topCanvas) drawBars(topCanvas, top.map(([id, v]) => ({ label: categoryById(id).label.split(' ')[0], value: v, color: categoryById(id).color })), { valueLabel: (v) => money0(v) });
+}
