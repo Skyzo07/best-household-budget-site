@@ -13,11 +13,11 @@ const app = $('#app');
 
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
-  return ['transactions', 'budgets', 'bills', 'goals', 'annual', 'insights', 'reports'].includes(h) ? h : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'goals', 'annual', 'insights', 'reports'].includes(h) ? h : 'dashboard';
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'goals', 'annual', 'insights', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'goals', 'annual', 'insights', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -32,6 +32,7 @@ async function showView(route) {
   if (route === 'insights') renderInsights(state, root);
   // New sections load on demand so the first load stays small.
   if (route === 'bills') (await import('./bills.js')).renderBills(state, root);
+  if (route === 'grocery') (await import('./grocery.js')).renderGrocery(state, root);
   if (route === 'annual') (await import('./annual.js')).renderAnnual(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   window.scrollTo(0, 0);
@@ -241,6 +242,27 @@ debtForm.addEventListener('submit', (e) => {
 });
 $('#debt-cancel').addEventListener('click', () => debtDialog.close());
 
+// ---- Grocery-item dialog ----
+const grocDialog = $('#groc-dialog');
+const grocForm = $('#groc-form');
+grocForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = $('#groc-name').value.trim();
+  const qty = Number($('#groc-qty').value);
+  const price = Number($('#groc-price').value);
+  const err = $('#groc-error');
+  if (!name) { err.textContent = 'Please name the item.'; err.hidden = false; return; }
+  if (!qty || qty < 1) { err.textContent = 'Quantity must be at least 1.'; err.hidden = false; return; }
+  if (!price || price <= 0) { err.textContent = 'Price must be more than $0.'; err.hidden = false; return; }
+  if (!state.grocery) state.grocery = { offset: 0, list: [], pantry: [], overrides: {} };
+  state.grocery.list.push({ id: uid('groc'), name, qty, price: Math.round(price * 100) / 100, checked: false, pantryId: '' });
+  state.sample = false;
+  persist();
+  grocDialog.close();
+  rerender();
+});
+$('#groc-cancel').addEventListener('click', () => grocDialog.close());
+
 // ---- Delegated clicks ----
 app.addEventListener('click', async (e) => {
   const t = e.target;
@@ -263,6 +285,64 @@ app.addEventListener('click', async (e) => {
     rerender();
     if (posted.length) window.alert(posted.length + ' recurring item' + (posted.length === 1 ? '' : 's') + ' posted into Transactions for ' + monthLabel(state.currentMonth) + '.');
     else window.alert('Nothing due to post — every active rule is already posted for this month.');
+    return;
+  }
+  if (t.id === 'btn-add-groc') {
+    $('#groc-dialog-title').textContent = 'Add grocery item';
+    $('#groc-error').hidden = true;
+    $('#groc-name').value = ''; $('#groc-qty').value = 1; $('#groc-price').value = '';
+    grocDialog.showModal();
+    return;
+  }
+  if (t.id === 'btn-buy-list' || t.id === 'btn-buy-list-2') {
+    const grocery = await import('./grocery.js');
+    const tx = grocery.buyGroceryList(state);
+    persist();
+    rerender();
+    if (tx) window.alert('Posted: weekly grocery shop — ' + money(tx.amount) + ' into Transactions for ' + monthLabel(state.currentMonth) + '.');
+    else window.alert('Nothing left to buy — every item on the list is already ticked off.');
+    return;
+  }
+  if (t.id === 'btn-clear-bought') {
+    if (state.grocery) {
+      const n = state.grocery.list.filter((i) => i.checked).length;
+      state.grocery.list = state.grocery.list.filter((i) => !i.checked);
+      state.sample = false;
+      persist();
+      rerender();
+      if (n === 0) window.alert('No bought items to clear yet — tick items off as you shop.');
+    }
+    return;
+  }
+  const weekBtn = t.closest('[data-week]');
+  if (weekBtn) {
+    if (!state.grocery) state.grocery = { offset: 0, list: [], pantry: [], overrides: {} };
+    state.grocery.offset = (state.grocery.offset || 0) + Number(weekBtn.dataset.week);
+    state.sample = false;
+    persist();
+    rerender();
+    return;
+  }
+  const pantryBtn = t.closest('[data-pantry-add]');
+  if (pantryBtn) {
+    const grocery = await import('./grocery.js');
+    const added = grocery.pantryAdd(state, pantryBtn.dataset.pantryAdd);
+    persist();
+    rerender();
+    if (added) window.alert('Added to the list: ' + added.name + ' — ' + money(added.price) + '.');
+    return;
+  }
+  const grocDel = t.closest('[data-groc-del]');
+  if (grocDel) {
+    if (state.grocery) {
+      const item = state.grocery.list.find((x) => x.id === grocDel.dataset.grocDel);
+      if (item && window.confirm('Remove "' + item.name + '" from the grocery list?')) {
+        state.grocery.list = state.grocery.list.filter((x) => x.id !== item.id);
+        state.sample = false;
+        persist();
+        rerender();
+      }
+    }
     return;
   }
   if (t.id === 'btn-export') { exportCSV(); return; }
@@ -420,6 +500,25 @@ app.addEventListener('input', (e) => {
       if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
     }
   }
+  if (t.dataset && (t.dataset.mealDish !== undefined || t.dataset.mealCost !== undefined)) {
+    const isDish = t.dataset.mealDish !== undefined;
+    const idx = Number(isDish ? t.dataset.mealDish : t.dataset.mealCost);
+    const field = isDish ? 'mealDish' : 'mealCost';
+    const pos = t.selectionStart;
+    const typed = isDish ? t.value : Number(t.value);
+    import('./grocery.js').then((g) => {
+      const m = g.weekMeals(state)[idx];
+      if (!m) return;
+      const dish = isDish ? (String(typed).trim() || m.dish) : m.dish;
+      const cost = isDish ? m.cost : (Number.isFinite(typed) && typed >= 0 ? typed : m.cost);
+      g.setMealOverride(state, (state.grocery && state.grocery.offset) || 0, idx, dish, cost);
+      persist();
+      rerender();
+      const el = document.querySelector('[data-' + field + '="' + idx + '"]');
+      if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+    });
+    return;
+  }
   if (t.dataset && t.dataset.extra) {
     const v = Number(t.value);
     if (Number.isFinite(v) && v >= 0) {
@@ -435,6 +534,15 @@ app.addEventListener('input', (e) => {
 });
 app.addEventListener('change', (e) => {
   if (e.target.id === 'f-cat' || e.target.id === 'f-kind') rerender();
+  if (e.target.dataset && e.target.dataset.grocCheck) {
+    const item = state.grocery && state.grocery.list.find((x) => x.id === e.target.dataset.grocCheck);
+    if (item) {
+      item.checked = e.target.checked;
+      state.sample = false;
+      persist();
+      rerender();
+    }
+  }
 });
 
 // ---- Month switcher ----

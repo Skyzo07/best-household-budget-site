@@ -232,6 +232,66 @@ export function sampleDebts() {
   ];
 }
 
+// The grocery list for the week of 16 Nov 2026 — the shop behind that
+// week's dinners. Milk, eggs and bread are already bought (ticked); the
+// rest totals $108.24 still to buy, against a $143.19 weekly budget.
+export function sampleGroceryList() {
+  const rows = [
+    ['Whole chicken 1.6 kg', 1, 13.60, false],
+    ['Beef mince 500 g', 1, 8.90, false],
+    ['Salmon fillets 400 g', 1, 17.20, false],
+    ['Spaghetti 500 g', 1, 1.85, false],
+    ['Arborio rice 1 kg', 1, 3.40, false],
+    ['Tinned tomatoes', 4, 1.30, false],
+    ['Cheddar block 400 g', 1, 6.75, false],
+    ['Mozzarella 250 g', 1, 4.10, false],
+    ['Pizza bases', 2, 2.80, false],
+    ['Mixed vegetables 1 kg', 1, 4.80, false],
+    ['Potatoes 2 kg', 1, 3.90, false],
+    ['Onions 1 kg', 1, 2.40, false],
+    ['Capsicums', 3, 1.50, false],
+    ['Red lentils 500 g', 1, 2.10, false],
+    ['Naan bread', 4, 1.15, false],
+    ['Tortilla wraps', 8, 0.48, false],
+    ['Salad leaves', 1, 3.20, false],
+    ['Fruit — apples & bananas', 1, 7.40, false],
+    ['Milk 3 L', 1, 5.10, true],
+    ['Eggs — dozen', 1, 6.50, true],
+    ['Bread loaf', 2, 2.90, true],
+    ['Butter 250 g', 1, 4.90, false],
+  ];
+  return rows.map(([name, qty, price, checked], i) => ({
+    id: 'groc-' + (i + 1), name, qty, price, checked, pantryId: '',
+  }));
+}
+
+export function samplePantry() {
+  return [
+    { id: 'pantry-oil', name: 'Olive oil 1 L', stock: 'Half a bottle left — running low', price: 9.80 },
+    { id: 'pantry-flour', name: 'Plain flour 2 kg', stock: 'About 1 kg left', price: 3.60 },
+    { id: 'pantry-soy', name: 'Soy sauce', stock: 'A splash left — running low', price: 4.20 },
+    { id: 'pantry-beans', name: 'Tinned beans', stock: 'Two tins left — low', price: 2.60 },
+    { id: 'pantry-coffee', name: 'Coffee 200 g', stock: 'Nearly out — running low', price: 8.40 },
+    { id: 'pantry-tea', name: 'Tea bags ×100', stock: 'Half a box left', price: 3.90 },
+    { id: 'pantry-sugar', name: 'Sugar 1 kg', stock: 'Plenty left', price: 2.80 },
+    { id: 'pantry-spices', name: 'Cumin & paprika', stock: 'Plenty left', price: 3.10 },
+  ];
+}
+
+// Fill v3 fields into an older saved state so v1/v2 saves keep working.
+export function ensureV3(state) {
+  if (!state) return sampleState();
+  ensureV2(state);
+  if (!state.grocery || !Array.isArray(state.grocery.list)) {
+    state.grocery = { offset: 0, list: sampleGroceryList(), pantry: samplePantry(), overrides: {} };
+  }
+  if (!Array.isArray(state.grocery.pantry)) state.grocery.pantry = samplePantry();
+  if (typeof state.grocery.offset !== 'number') state.grocery.offset = 0;
+  if (!state.grocery.overrides) state.grocery.overrides = {};
+  state.version = 3;
+  return state;
+}
+
 // Fill v2 fields into a v1 saved state so older saves keep working.
 export function ensureV2(state) {
   if (!state) return sampleState();
@@ -248,7 +308,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 2,
+    version: 3,
     sample: true,
     currentMonth: '2026-11',
     budgets,
@@ -263,6 +323,7 @@ export function sampleState() {
     allowances: sampleAllowances(),
     debts: sampleDebts(),
     payoffExtra: 50,
+    grocery: { offset: 0, list: sampleGroceryList(), pantry: samplePantry(), overrides: {} },
   };
 }
 
@@ -272,7 +333,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV2(parsed);
+    return ensureV3(parsed);
   } catch {
     return sampleState();
   }

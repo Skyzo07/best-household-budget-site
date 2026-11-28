@@ -172,12 +172,21 @@ canvas.chart { width: 100%; height: auto; display: block; }
 .allow-chip .bar { margin-top: 6px; }
 .rule-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 td input[type="number"] { width: 92px; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; text-align: right; }
+td input[type="text"] { width: 100%; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+
+/* ---- groceries & meals, budget sparklines, goal milestones (v3) ---- */
+.goal-mile { font-size: .83rem; background: var(--green-soft); border-radius: 8px; padding: 7px 10px; margin: 10px 0 0; }
+.spark { vertical-align: middle; flex: none; }
+.check-row { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; cursor: pointer; margin: 0; }
+.check-row input[type="checkbox"] { width: 20px; height: 20px; flex: none; accent-color: var(--green); cursor: pointer; }
+.grocery-list li.bought .tx-main b { text-decoration: line-through; color: var(--muted); }
+.grocery-list li.bought { opacity: .75; }
 .inline-label { font-weight: 600; }
 .inline-label input { display: inline-block; width: 110px; font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
 
 /* ---- print: only the monthly summary ---- */
 @media print {
-  .topbar, .foot, .btn, .month-switch, #tx-dialog, #goal-dialog, #bill-dialog, #rule-dialog, #debt-dialog { display: none !important; }
+  .topbar, .foot, .btn, .month-switch, #tx-dialog, #goal-dialog, #bill-dialog, #rule-dialog, #debt-dialog, #groc-dialog { display: none !important; }
   body { background: #fff; }
   .card { box-shadow: none; }
 }

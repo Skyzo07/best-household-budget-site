@@ -12,6 +12,17 @@ function fmtDate(iso) {
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// Tiny inline sparkline: six monthly values as an SVG polyline, no canvas,
+// no extra file. Width 120, height 28.
+function sparkSVG(values, color) {
+  const max = Math.max.apply(null, values.concat([1]));
+  const pts = values.map((v, i) => ((i / Math.max(values.length - 1, 1)) * 116 + 2).toFixed(1) + ',' + (26 - (v / max) * 22).toFixed(1)).join(' ');
+  const last = values[values.length - 1] || 0;
+  const lx = ((values.length - 1) / Math.max(values.length - 1, 1)) * 116 + 2;
+  const ly = 26 - (last / max) * 22;
+  return '<svg class="spark" width="120" height="28" viewBox="0 0 120 28" role="img" aria-label="Six-month spending trend"><polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="' + lx.toFixed(1) + '" cy="' + ly.toFixed(1) + '" r="3" fill="' + color + '"/></svg>';
+}
+
 function txRow(t) {
   const cat = categoryById(t.category);
   const sign = t.kind === 'income' ? '+' : '−';
@@ -73,6 +84,15 @@ export function renderDashboard(state, root) {
     const pct = a.monthly ? Math.min(100, (spent / a.monthly) * 100) : 0;
     return '<div class="allow-chip"><b>' + esc(a.who) + '</b><span>' + money(spent) + ' of ' + money(a.monthly) + '</span><span class="' + (left <= 0 ? 'neg' : 'pos') + '">' + money(left) + ' left</span><div class="bar"><i style="width:' + pct.toFixed(0) + '%"></i></div></div>';
   }).join('');
+  // Grocery list at a glance: what is still to buy this week.
+  const grocList = (state.grocery && state.grocery.list) || [];
+  let grocToBuy = 0, grocTotal = 0, grocLeft = 0;
+  for (const item of grocList) {
+    const line = item.price * (item.qty || 1);
+    grocTotal += line;
+    if (item.checked) continue;
+    grocToBuy += line; grocLeft++;
+  }
   // 50/30/20 rule: needs vs wants vs savings, as shares of income.
   const NEEDS = ['housing', 'utilities', 'transport', 'groceries', 'health', 'kids'];
   const WANTS = ['dining', 'fun', 'shopping', 'other'];
@@ -135,7 +155,8 @@ export function renderDashboard(state, root) {
       }).join('')
     + '<p class="muted small">Tip: move your saved amount into a goal the day payday lands — what you don’t see, you don’t spend.</p></div>'
     + '</div>'
-    + '<div class="card" style="margin-top:16px"><h2>Pocket money &amp; allowances <a href="#/bills">Manage →</a></h2><p class="muted small" style="margin-top:0">Each person’s free-spending money for ' + monthLabel(key) + ' — counted from their own tagged spending. No questions asked, no category to justify.</p><div class="allow-grid">' + allowanceRows + '</div></div>';
+    + '<div class="card" style="margin-top:16px"><h2>Pocket money &amp; allowances <a href="#/bills">Manage →</a></h2><p class="muted small" style="margin-top:0">Each person’s free-spending money for ' + monthLabel(key) + ' — counted from their own tagged spending. No questions asked, no category to justify.</p><div class="allow-grid">' + allowanceRows + '</div></div>'
+    + (grocList.length ? '<div class="card" style="margin-top:16px"><h2>Groceries &amp; meals <a href="#/grocery">Plan &amp; list →</a></h2><p style="margin-top:0">Dinner is planned for all 7 nights this week. The grocery list stands at <b>' + money(grocToBuy) + ' still to buy</b> — ' + grocLeft + ' of ' + grocList.length + ' items left, ' + money(grocTotal) + ' in total. Tick items off in the store, then post the shop into Transactions with one press.</p></div>' : '');
   drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
 }
 
@@ -182,7 +203,16 @@ export function renderBudgets(state, root) {
         return '<div class="bar-row"><div class="bar-top"><span><span class="cat-dot" style="background:' + c.color + '"></span><b>' + esc(c.label) + '</b> <span class="muted">· spent ' + money(spent) + '</span></span>'
           + '<span class="budget-edit">$<input type="number" min="0" step="10" value="' + b + '" data-budget="' + c.id + '" aria-label="Monthly budget for ' + esc(c.label) + '"> / mo</span></div></div>';
       }).join('')
-    + '<p class="muted small">Limits save automatically as you type. Set a category to 0 to hide it from the plan.</p></div></div>';
+    + '<p class="muted small">Limits save automatically as you type. Set a category to 0 to hide it from the plan.</p></div></div>'
+    + '<div class="card" style="margin-top:16px"><h2>Six-month history</h2><p class="muted small" style="margin-top:0">What each category actually cost, ' + monthLabel(lastMonths(key, 6)[0]) + ' to ' + monthLabel(key) + ' — the line is the trend, the dot is this month.</p>'
+    + CATEGORIES.filter((c) => c.budget > 0).map((c) => {
+        const vals = lastMonths(key, 6).map((k) => categorySpend(state, k)[c.id] || 0);
+        const avg = vals.reduce((a, b) => a + b, 0) / 6;
+        const last = vals[vals.length - 1];
+        const trend = last > avg * 1.1 ? '▲ above its 6-month average' : last < avg * 0.9 ? '▼ below its 6-month average' : '≈ at its 6-month average';
+        return '<div class="bar-row"><div class="bar-top"><span><span class="cat-dot" style="background:' + c.color + '"></span><b>' + esc(c.label) + '</b> <span class="muted">· this month ' + money(last) + ' · 6-mo avg ' + money(avg) + '</span></span><span>' + sparkSVG(vals, c.color) + ' <span class="muted small">' + trend + '</span></span></div></div>';
+      }).join('')
+    + '</div>';
 }
 
 export function renderGoals(state, root) {
@@ -197,10 +227,15 @@ export function renderGoals(state, root) {
         const pct = g.target ? (g.saved / g.target) * 100 : 0;
         const left = Math.max(0, g.target - g.saved);
         const color = pct >= 100 ? '#1d6b4f' : pct >= 50 ? '#2b5f8a' : '#d9a441';
+        const nextMile = [25, 50, 75, 100].find((m) => pct < m);
+        const mileLine = nextMile
+          ? (() => { const need = Math.round((g.target * nextMile / 100 - g.saved) * 100) / 100; const months = Math.max(1, Math.ceil(need / 100)); return '<p class="goal-mile">Next milestone: <b>' + nextMile + '% (' + money(g.target * nextMile / 100) + ')</b> — ' + money(need) + ' to go · about ' + months + ' month' + (months === 1 ? '' : 's') + ' at $100 a month</p>'; })()
+          : '<p class="goal-mile">All milestones reached — 100% saved.</p>';
         return '<div class="card goal-card"><h3>' + esc(g.name) + '</h3>'
           + '<div class="goal-ring">' + ringSVG(pct, color) + '<div class="ring-label"><b>' + Math.round(pct) + '%</b><span>saved</span></div></div>'
           + '<p class="goal-amt"><b>' + money(g.saved) + '</b> of ' + money(g.target) + '</p>'
           + '<p class="goal-date">' + (left > 0 ? money(left) + ' to go' : 'Goal reached — well done!') + (g.date ? ' · by ' + fmtDate(g.date) : '') + '</p>'
+          + mileLine
           + '<div class="goal-actions"><button class="btn small" data-add-goal="' + g.id + '">+ $100</button><button class="btn small ghost" data-edit-goal="' + g.id + '">Edit</button><button class="btn small danger" data-del-goal="' + g.id + '">Delete</button></div></div>';
       }).join('')
     + '</div>'
@@ -240,8 +275,12 @@ export function renderInsights(state, root) {
     + (top.length ? '<canvas id="chart-top" class="chart" height="200" style="margin-top:8px"></canvas>' : '<p class="empty">No spending recorded this month yet.</p>')
     + '<p class="muted small">Housing is a fixed cost — the categories you can actually move are the ones below it.</p></div>'
     + '<div class="card"><h2>What to do next</h2>' + tips.map((t) => '<div class="tip ' + t.cls + '">' + t.text + '</div>').join('')
-    + '<p class="muted small">Month over month: income ' + (prev.income ? ((cur.income - prev.income) / prev.income * 100).toFixed(1) : '0') + '% · spending ' + (prev.expense ? ((cur.expense - prev.expense) / prev.expense * 100).toFixed(1) : '0') + '% vs ' + monthLabel(shiftMonth(key, -1)) + '.</p></div></div>';
+    + '<p class="muted small">Month over month: income ' + (prev.income ? ((cur.income - prev.income) / prev.income * 100).toFixed(1) : '0') + '% · spending ' + (prev.expense ? ((cur.expense - prev.expense) / prev.expense * 100).toFixed(1) : '0') + '% vs ' + monthLabel(shiftMonth(key, -1)) + '.</p></div></div>'
+    + '<div class="card" style="margin-top:16px"><h2>Savings rate — last 6 months</h2><div class="chart-wrap"><canvas id="chart-saverate" class="chart" height="200"></canvas></div>'
+    + '<p class="muted small">Share of income saved each month. Green is at or above the 20% rule of thumb; gold is below it. Months above 20% are the ones building the emergency fund.</p></div>';
   drawTrend(root.querySelector('#chart-trend'), points);
   const topCanvas = root.querySelector('#chart-top');
   if (topCanvas) drawBars(topCanvas, top.map(([id, v]) => ({ label: categoryById(id).label.split(' ')[0], value: v, color: categoryById(id).color })), { valueLabel: (v) => money0(v) });
+  const rateCanvas = root.querySelector('#chart-saverate');
+  if (rateCanvas) drawBars(rateCanvas, points.map((p) => ({ label: p.label, value: p.income ? Math.max(0, (p.income - p.expense) / p.income * 100) : 0, color: (p.income && (p.income - p.expense) / p.income >= 0.2) ? '#1d6b4f' : '#d9a441' })), { valueLabel: (v) => v.toFixed(0) + '%' });
 }
