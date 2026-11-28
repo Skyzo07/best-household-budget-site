@@ -75,6 +75,18 @@
 // (target ≤ ~50 KB); later by import() 15 files, 72,105 bytes gzip-9
 // (bigbuys.js 5,665 lazy); whole app 22 files, 399,290 bytes.
 // Verified: /tmp/bhb-v14-verify.mjs, 80/80 checks PASS, 0 JS errors,
+// 0 external requests. v15 adds streaks.js (lazy too): streaks &
+// wins — months inside the budget (11 in a row), the no-spend streak
+// counted from Transactions, the 52-week run, one personal challenge
+// per member from the banked records, and the milestones already
+// reached with the next in line; plus goal milestone chips (25/50/75/
+// 100% markers on every goal card, a fully-funded celebration with a
+// Start-a-new-goal button) and seeded banked-allowance records in
+// data.js ($210 across the household, all into the emergency fund).
+// v15 first load: 6 files, 44,144 bytes gzip-9 (target ≤ ~52 KB);
+// later by import() 16 files, 78,089 bytes gzip-9 (streaks.js 5,984
+// lazy); whole app 23 files, 424,592 bytes. Verified:
+// /tmp/bhb-v15-verify.mjs, 90/90 checks PASS, 0 JS errors,
 // 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

@@ -111,6 +111,33 @@ account, no server, nothing leaves your browser. Built for the make.fun
   — add $25 here and the goal moves too. Remove takes a purchase out of
   the plan. A purchase whose monthly need is bigger than the pace left
   for it slips, and the ready month says by how far.
+- **Streaks & wins (v15)** — the household's money habits told back as
+  streaks, every figure computed live from its own records. **Months
+  inside the budget: 11 in a row** — every month of 2026 came in under
+  the $3,800.00 plan, tightest October ($3,089.35, $710.65 of headroom),
+  cheapest February ($2,793.00) — with a month-by-month chart and a dot
+  per month. **No-spend streak: 8 days** with nothing spent at all,
+  counted from Transactions (last spending 20 November), 10 quiet days
+  in November so far, shown on a day-by-day calendar that also marks the
+  6 days the household logged on the no-spend calendar — and **Mark today
+  a no-spend day** marks it for real. **52-week challenge: 20 weeks in a
+  row** paid, $210.00 of $1,378.00, with **Pay week 21 ($21.00)** paying
+  the next deposit for real. **Everyone's challenges: $210.00 banked of
+  $660.00** in targets — Maya $145.00 of $300.00 for Christmas presents
+  (48%), Daniel $40.00 of $200.00 for fishing gear, Sofia $15.00 of
+  $100.00 for a new bike, Liam $10.00 of $60.00 for a LEGO set — each
+  with a link to that person's page, where the banking happens. Every
+  streak shows its current count, its best, **what keeps it alive** and
+  **what breaks it** (one month over $3,800 resets the budget run to
+  zero; any spending at all ends the no-spend run; a missed week breaks
+  the 52-week run). Then **milestones already reached** — net worth
+  turned positive in April 2026, the emergency fund past halfway at
+  $4,350.00 of $6,000.00, 11 months inside the budget, 20 weeks paid,
+  a full week without spending — and the next ones in line, with what
+  is still to go (emergency fund to 75% needs $150.00; net worth to
+  $25,000.00 needs $4,922.24, landing January 2027 at the pace kept).
+  The subscription audit's $491.34 a year is named as one more win on
+  the table, with a link to the audit.
 - **Subscription audit — usage log (v14)** — every subscription now
   shows the dates it was actually opened, not just the last one: a
   visible log ("Used 4× logged: Nov 22 · Oct 23 · Sep 23") under the
@@ -189,14 +216,14 @@ account, no server, nothing leaves your browser. Built for the make.fun
   their own banked share of it — Sofia banking her $0.50 into the holiday
   moves it from $980.00 to $980.50 and the card says so — so a kid can see
   their own money moving a goal, not just the household total.
-  **Personal savings challenges (v12):** one target per person, filled
+  **Personal savings challenges (v12, banked records added v15):** one target per person, filled
   only by banking unspent allowance — the banked record *is* the
   progress, so the bar can never disagree with the money. Sofia's
-  **New bike, $100.00** (nothing banked yet, $100.00 to go — at her usual
-  $20.92 a month left unspent, about 5 months); Maya's **Christmas
-  presents, $300.00**; Daniel's **Fishing gear, $200.00**; Liam's
-  **LEGO set, $60.00**. Bank Sofia's $0.50 unspent from November and the
-  bar moves at once to $0.50 of $100.00, 1% — and the overview card shows
+  **New bike, $100.00** ($15.00 banked, 15% — at her usual pace about
+  4 months to go); Maya's **Christmas presents, $300.00** ($145.00
+  banked, 48%); Daniel's **Fishing gear, $200.00** ($40.00 banked);
+  Liam's **LEGO set, $60.00** ($10.00 banked). Bank Sofia's $0.50 unspent from November and the
+  bar moves at once to $15.50 of $100.00 — and the overview card shows
   it too. Edit any target on the person's page and it saves as you type.
 - **Forecast** — next month, worked out from the household's own
   six-month history, not typed in: a projection for every budgeted
@@ -245,7 +272,15 @@ account, no server, nothing leaves your browser. Built for the make.fun
 - **Savings goals** — goals with progress rings, target dates and one-click
   $100 contributions; add, edit and delete goals. Every goal shows its
   next milestone (25 / 50 / 75 / 100%) and roughly how many months at
-  $100 a month stand between you and it.
+  $100 a month stand between you and it. **Milestone markers (v15):**
+  each card now carries its four milestone chips — reached ones marked
+  green with a ✓ (the emergency fund has 25% and 50% done, $1,500.00
+  and $3,000.00; the holiday has 25% done; the car deposit has 25%
+  done), the next one in line in amber (75% for the emergency fund —
+  $150.00 to go), the rest quiet. A goal that reaches 100% gets a
+  **fully-funded celebration** — a banner across the page and a cheer on
+  its own card — with a **Start a new goal** button that opens the new-goal
+  form right there.
 - **Savings challenges** — three challenges that turn small change into real
   savings, all tied to the household's own figures: the **52-week
   challenge** (growing $1→$52, reverse $52→$1, or flat $10 a week — $1,378
@@ -311,7 +346,10 @@ account, no server, nothing leaves your browser. Built for the make.fun
   (one sample check-in from week 1 of November), defaulted for older saves.
   v14 adds the big-purchases plan (four sample purchases) and the
   subscription usage logs (seeded from each subscription's last-used
-  date), both defaulted for older saves.
+  date), both defaulted for older saves. v15 adds the banked-allowance
+  records behind the per-member challenges (Maya $145.00, Daniel $40.00,
+  Sofia $15.00, Liam $10.00 into the emergency fund), defaulted for
+  older saves.
 
 ## Tech
 
@@ -319,7 +357,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The fourteen newer sections are one-job
+  (routing, dialogs, CRUD, export). The fifteen newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -349,7 +387,11 @@ account, no server, nothing leaves your browser. Built for the make.fun
   planner — cost, target date and set-aside per purchase, monthly
   set-aside and ready month worked out live from the household's own
   saving pace, pace handed out by earliest target first, add form with
-  optional link to a savings goal, + $25 / + $50 into any pot, remove).
+  optional link to a savings goal, + $25 / + $50 into any pot, remove),
+  `streaks.js` (streaks & wins — months inside the budget, the no-spend
+  streak counted from Transactions, the 52-week run, one personal
+  challenge per member from the banked records, milestones already
+  reached and the next in line; mark-today and pay-next-week controls).
   `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
@@ -378,9 +420,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-bigbuys.png` — Big purchases: saving pace $2,736.59 a month, $870.00 set aside of $3,410.00 planned, $437.00 a month between the four purchases, all ready on time (desktop, 1280×800)
-- `screenshots/3-checkin.png` — Weekly check-in, week 2 of November: flexible spending $768.54 vs a $482.68 weekly share, groceries / kids / shopping / dining over, and the one job for next week (desktop, 1280×800)
-- `screenshots/4-envelopes-phone.png` — Cash envelopes on a phone (390×844): filled for November $2,557.20, with October's unspent $647.20 already rolled in
+- `screenshots/2-streaks.png` — Streaks & wins: 11 months inside the budget in a row, an 8-day no-spend streak, 20 weeks of the 52-week challenge paid, $210.00 banked across the household's challenges, and the milestones already reached (desktop, 1280×800)
+- `screenshots/3-goals.png` — Savings goals with the new milestone chips: emergency fund 25% and 50% reached, 75% next at $4,500.00, holiday 25% reached, car deposit 25% reached (desktop, 1280×800)
+- `screenshots/4-budgets-phone.png` — Monthly budgets on a phone (390×844): budget vs actual bars and the six-month sparklines in the phone layout
 
 ## License
 

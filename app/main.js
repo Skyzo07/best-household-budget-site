@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -53,6 +53,7 @@ async function showView(route) {
   if (route === 'whatif') (await import('./whatif.js')).renderWhatif(state, root);
   if (route === 'checkin') (await import('./checkin.js')).renderCheckin(state, root);
   if (route === 'bigbuys') (await import('./bigbuys.js')).renderBigbuys(state, root);
+  if (route === 'streaks') (await import('./streaks.js')).renderStreaks(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -706,6 +707,8 @@ app.addEventListener('click', async (e) => {
     if (g) openGoalDialog(g);
     return;
   }
+  const goalNew = t.closest('[data-goal-new]');
+  if (goalNew) { openGoalDialog(null); return; }
   const delGoal = t.closest('[data-del-goal]');
   if (delGoal) {
     const g = state.goals.find((x) => x.id === delGoal.dataset.delGoal);
@@ -759,6 +762,26 @@ app.addEventListener('click', async (e) => {
     rerender();
     if (moved > 0) window.alert('Moved ' + money(moved) + ' from the pot into the emergency fund goal.');
     else window.alert('The pot is empty — sweep this month’s round-ups first.');
+    return;
+  }
+  // ---- Streaks & wins (v15): mark today a no-spend day, pay the next
+  // 52-week deposit — both do real work and re-render the streaks.
+  const sk = await import('./streaks.js');
+  if (t.closest('[data-streak-nospend]')) {
+    const marked = sk.markTodayNoSpend(state);
+    persist();
+    rerender();
+    window.alert(marked ? 'Today is marked a no-spend day — the calendar on the Savings page shows it too.' : 'Today is already marked — unmark it on the Savings page if the day did not stay quiet.');
+    return;
+  }
+  if (t.closest('[data-streak-pay-week]')) {
+    const week = sk.payNextWeek(state);
+    persist();
+    rerender();
+    if (week) {
+      const ch = savings.challengeSaved(state);
+      window.alert('Week ' + week + ' paid — ' + money(ch.saved) + ' saved in the challenge now, ' + (52 - ch.weeksDone) + ' weeks to go.');
+    } else window.alert('All 52 weeks are paid — the challenge is complete.');
     return;
   }
   // ---- Subscription audit (loaded on demand) ----

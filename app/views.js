@@ -302,9 +302,16 @@ export function renderGoals(state, root) {
   const totalSaved = state.goals.reduce((a, g) => a + g.saved, 0);
   const totalTarget = state.goals.reduce((a, g) => a + g.target, 0);
   const pctAll = totalTarget ? Math.round(totalSaved / totalTarget * 100) : 0;
+  // Milestone celebrations (v15): a goal that reaches 100% is a win
+  // worth marking — the page says so, and offers the next goal.
+  const funded = state.goals.filter((g) => g.target > 0 && g.saved >= g.target);
+  const fundedBanner = funded.length
+    ? '<div class="alert ok" role="status"><strong>🎉 ' + funded.map((g) => esc(g.name)).join(', ') + (funded.length === 1 ? ' is' : ' are') + ' fully funded!</strong> ' + money(funded.reduce((a, g) => a + g.saved, 0)) + ' saved and waiting to be spent on what it was for. Ready for the next one? <button type="button" class="btn small" data-goal-new="1">Start a new goal</button></div>'
+    : '';
   root.innerHTML =
     '<div class="page-head"><div><h1>Savings goals</h1><p class="muted">Give every dollar a job before the month starts. ' + money(totalSaved) + ' saved toward ' + money(totalTarget) + ' in goals — ' + pctAll + '% of the way there.</p></div>'
     + '<div><button class="btn primary" id="btn-add-goal">+ New goal</button></div></div>'
+    + fundedBanner
     + '<div class="goal-grid">'
     + state.goals.map((g) => {
         const pct = g.target ? (g.saved / g.target) * 100 : 0;
@@ -314,11 +321,25 @@ export function renderGoals(state, root) {
         const mileLine = nextMile
           ? (() => { const need = Math.round((g.target * nextMile / 100 - g.saved) * 100) / 100; const months = Math.max(1, Math.ceil(need / 100)); return '<p class="goal-mile">Next milestone: <b>' + nextMile + '% (' + money(g.target * nextMile / 100) + ')</b> — ' + money(need) + ' to go · about ' + months + ' month' + (months === 1 ? '' : 's') + ' at $100 a month</p>'; })()
           : '<p class="goal-mile">All milestones reached — 100% saved.</p>';
+        // Milestone markers (v15): 25 / 50 / 75 / 100% chips — reached
+        // ones are marked green, the next one in line is amber, the
+        // rest are quiet. A fully funded goal gets its own cheer and a
+        // button to start the next goal.
+        const mileChips = [25, 50, 75, 100].map((m) => {
+          const reached = pct >= m;
+          const isNext = !reached && m === nextMile;
+          return '<span class="mile-chip' + (reached ? ' done' : isNext ? ' next' : '') + '">' + (reached ? '✓ ' : '') + m + '% · ' + money(g.target * m / 100) + '</span>';
+        }).join('');
+        const fundedLine = pct >= 100
+          ? '<p class="goal-mile">🎉 Fully funded — every milestone reached. <button type="button" class="btn small" data-goal-new="1">Start a new goal</button></p>'
+          : '';
         return '<div class="card goal-card"><h3>' + esc(g.name) + '</h3>'
           + '<div class="goal-ring">' + ringSVG(pct, color) + '<div class="ring-label"><b>' + Math.round(pct) + '%</b><span>saved</span></div></div>'
           + '<p class="goal-amt"><b>' + money(g.saved) + '</b> of ' + money(g.target) + '</p>'
           + '<p class="goal-date">' + (left > 0 ? money(left) + ' to go' : 'Goal reached — well done!') + (g.date ? ' · by ' + fmtDate(g.date) : '') + '</p>'
+          + '<p class="mile-chips">' + mileChips + '</p>'
           + mileLine
+          + fundedLine
           + '<div class="goal-actions"><button class="btn small" data-add-goal="' + g.id + '">+ $100</button><button class="btn small ghost" data-edit-goal="' + g.id + '">Edit</button><button class="btn small danger" data-del-goal="' + g.id + '">Delete</button></div></div>';
       }).join('')
     + '</div>'

@@ -451,6 +451,19 @@ export function bigbuyStore(state) {
   return state.bigbuys;
 }
 
+// Fill v15 fields into an older saved state so v1–v14 saves keep working.
+// v15 adds the banked-allowance records behind the per-member challenges
+// on the Streaks page (empty = nothing banked yet, the page falls back
+// to the sample records). The version bump records that the save has
+// been seen by v15 code.
+export function ensureV15(state) {
+  if (!state) return sampleState();
+  ensureV14(state);
+  if (!state.banked || typeof state.banked !== 'object') state.banked = {};
+  state.version = 15;
+  return state;
+}
+
 // Fill v14 fields into an older saved state so v1–v13 saves keep working.
 // v14 adds the big-purchases plan (empty = no plan yet, the page falls
 // back to the four sample purchases). The version bump records that
@@ -479,7 +492,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 14,
+    version: 15,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -504,7 +517,20 @@ export function sampleState() {
     subscriptions: sampleSubscriptions(),
     checkins: sampleCheckins(),
     bigbuys: sampleBigBuys(),
-    banked: {},
+    // Banked unspent allowance (v15): what each person already moved
+    // into savings — Maya $145, Daniel $40, Sofia $15, Liam $10, $210
+    // between them, all into the emergency fund. The emergency fund's
+    // $4,350 already includes this banked money — banking moves money
+    // into a goal, it never creates money on top of it — so the Goals
+    // page and the banked records can never disagree. A month already
+    // banked cannot be banked twice.
+    banked: {
+      'maya|2026-09': { amount: 60, goalId: 'goal-emergency' },
+      'maya|2026-10': { amount: 85, goalId: 'goal-emergency' },
+      'daniel|2026-10': { amount: 40, goalId: 'goal-emergency' },
+      'sofia|2026-10': { amount: 15, goalId: 'goal-emergency' },
+      'liam|2026-10': { amount: 10, goalId: 'goal-emergency' },
+    },
   };
 }
 
@@ -514,7 +540,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV14(parsed);
+    return ensureV15(parsed);
   } catch {
     return sampleState();
   }
