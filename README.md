@@ -247,6 +247,31 @@ account, no server, nothing leaves your browser. Built for the make.fun
   **Everyday spending** and **Include rent & bills** — count the rent
   and the 1st swamps whichever weekday it falls on (Sundays jump to
   $1,530.50), so the page says plainly which one it is measuring.
+- **Envelope review (v24)** — November, envelope by envelope: what was
+  filled, what was actually spent, what is left, what rolled in from
+  October and what rolls out to December, the three-month average spend
+  (September–November) and a suggested December fill — the average
+  rounded up to the next $5. No envelope overspent in November:
+  Groceries ran closest, **$619.35 spent of a $620.00 fill ($0.65
+  left)**, while Transport left the most unspent (**$349.00** of a
+  $483.00 fill, $186.00 of it rolling into December). The suggestions
+  follow habit, not hope: Groceries **$665** (three-month average
+  $661.95), Dining out **$105** (average $100.98), Transport **$135**,
+  Kids & school **$185**, Fun & family **$85**, Household **$135** —
+  **$1,310.00 across the envelopes**, $1,166.61 less than December
+  fills today ($2,476.61, fat with rollovers). **Apply suggested fills
+  to December** writes them into December's real envelopes on the
+  Envelopes page (November is untouched), **Undo** puts December back
+  exactly as it was, envelope by envelope, and each row has its own
+  **Use** button for a single envelope. The review follows the month
+  switcher, so any month can be reviewed the same way.
+- **Savings challenges — 52-week catch-up (v24)** — it is week 48 of
+  2026 and weeks 1–20 are paid ($210.00), so **28 weeks have slipped
+  (weeks 21–48)**. One press, **Catch up 28 missed weeks ($966.00)**,
+  marks them all paid at once — $1,176.00 saved across 48 weeks —
+  and **Undo catch-up** puts exactly those weeks back to unpaid.
+  Weeks after this one stay unpaid until their turn; they have not
+  slipped, they just have not come round yet.
 - **Money calendar (v22)** — the whole month on one page, every money
   event plotted on the day it lands, every figure computed live from
   the household's own records. **December 2026: $5,850.00 planned in**
@@ -705,7 +730,10 @@ account, no server, nothing leaves your browser. Built for the make.fun
   by transaction, and three "what this tells us" lines, all computed
   live from the household's own transactions, with a scope switch and
   an everyday-vs-include-rent-and-bills switch that re-measure the
-  whole page).
+  whole page), `envelopereview.js` (envelope review — fills vs spends
+  per envelope, over/under flags, rollovers, the three-month average
+  spend and a suggested next-month fill per envelope, with Apply and
+  Undo that write the suggestions into the real envelope fills).
   The members' monthly report cards live in `members.js` (top category
   and biggest spend per person, counted from their own tagged
   transactions).
@@ -740,9 +768,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-when.png` — When we spend, November 2026 everyday: Monday priciest at $417.70, Sunday cheapest at $80.50, weekends 16.5%, week 2 heaviest at $768.54, priciest day Mon 9 Nov $206.90 (desktop, 1280×800)
-- `screenshots/3-calendar.png` — Money calendar, December 2026: payday Dec 1 ($5,650.00 in), the meeting on Dec 6 open, subscription renewals and bills plotted across the month, kind filters, $5,850.00 planned in against $3,621.37 out (desktop, 1280×800)
-- `screenshots/4-forecast-phone.png` — Forecast on a phone (390×844): next month's per-category projections, the projected month-end and the emergency-fund date — no horizontal overflow
+- `screenshots/2-envelope-review.png` — Envelope review, November 2026: Groceries $619.35 of $620.00, Transport $349.00 left, suggested December fills $1,310.00 in total, Apply + Undo (desktop, 1280×800)
+- `screenshots/3-when.png` — When we spend, November 2026 everyday: Monday priciest at $417.70, Sunday cheapest at $80.50, weekends 16.5%, week 2 heaviest at $768.54, priciest day Mon 9 Nov $206.90 (desktop, 1280×800)
+- `screenshots/4-stores-phone.png` — Where we shop on a phone (390×844): the household's shops ranked by what was actually spent there, with the usual-shop pick — no horizontal overflow
 
 ## License
 

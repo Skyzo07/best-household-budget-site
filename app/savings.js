@@ -9,7 +9,7 @@
 //      dollar, swept into a pot once a month, then moved into the
 //      emergency-fund goal with one press.
 // Loaded on demand, so it stays out of the first load.
-import { money, money0, monthLabel, monthTotals, monthTransactions, categorySpend } from './data.js';
+import { money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, todayISO } from './data.js';
 import { ringSVG } from './charts.js';
 
 function esc(s) {
@@ -48,6 +48,74 @@ export function nextUnpaidWeek(state) {
   const paid = new Set(challenges(state).fiftyTwo.paid);
   for (let w = 1; w <= 52; w++) if (!paid.has(w)) return w;
   return 0;
+}
+
+// The ISO week of the year today falls in (week 1 is the week with
+// the year's first Thursday). 29 November 2026 is a Sunday in week 48.
+export function currentWeekOfYear() {
+  const iso = todayISO();
+  const [y, m, d] = iso.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  const day = (date.getUTCDay() + 6) % 7; // Monday = 0
+  date.setUTCDate(date.getUTCDate() - day + 3); // Thursday of this week
+  const firstThu = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+  const fday = (firstThu.getUTCDay() + 6) % 7;
+  firstThu.setUTCDate(firstThu.getUTCDate() - fday + 3);
+  const week = 1 + Math.round((date.getTime() - firstThu.getTime()) / (7 * 24 * 3600 * 1000));
+  return { week, year: date.getUTCFullYear() };
+}
+
+// Weeks that should be paid by now (1 … this week) but are not.
+export function missedWeeks(state) {
+  const cw = currentWeekOfYear().week;
+  const paid = new Set(challenges(state).fiftyTwo.paid);
+  const out = [];
+  for (let w = 1; w <= cw; w++) if (!paid.has(w)) out.push(w);
+  return out;
+}
+
+// The last catch-up, so it can be undone exactly.
+let lastCatchUpWeeks = [];
+export function lastCatchUp() { return lastCatchUpWeeks.slice(); }
+
+// Pay every missed week at once; returns what it cost and how many
+// weeks it caught up. Weeks after this one stay unpaid — they have
+// not slipped yet, they just have not come round.
+export function catchUpMissed(state) {
+  const c = challenges(state).fiftyTwo;
+  const mode = c.mode || 'grow';
+  const missed = missedWeeks(state);
+  let amount = 0;
+  for (const w of missed) { c.paid.push(w); amount += weekAmount(mode, w); }
+  c.paid.sort((a, b) => a - b);
+  lastCatchUpWeeks = missed.slice();
+  state.sample = false;
+  return { count: missed.length, amount };
+}
+
+export function undoCatchUp(state) {
+  if (!lastCatchUpWeeks.length) return 0;
+  const c = challenges(state).fiftyTwo;
+  const gone = new Set(lastCatchUpWeeks);
+  c.paid = c.paid.filter((w) => !gone.has(w));
+  const n = lastCatchUpWeeks.length;
+  lastCatchUpWeeks = [];
+  state.sample = false;
+  return n;
+}
+
+// "21–23, 25" — missed weeks read as ranges, not a wall of numbers.
+function weekRanges(weeks) {
+  const out = [];
+  let start = null, prev = null;
+  const flush = () => { if (start !== null) out.push(start === prev ? String(start) : start + '–' + prev); };
+  for (const w of weeks) {
+    if (start === null) { start = w; prev = w; }
+    else if (w === prev + 1) prev = w;
+    else { flush(); start = w; prev = w; }
+  }
+  flush();
+  return out.join(', ');
 }
 
 export function toggleWeek(state, week) {
@@ -131,6 +199,9 @@ export function renderSavings(state, root) {
   const pct = ch.target ? (ch.saved / ch.target) * 100 : 0;
   const next = nextUnpaidWeek(state);
   const mode = ch.mode;
+  const cw = currentWeekOfYear();
+  const missed = missedWeeks(state);
+  const missedTotal = missed.reduce((a, w) => a + weekAmount(mode, w), 0);
   const pot = Math.round((c.roundUp.pot || 0) * 100) / 100;
   const swept = (c.roundUp.swept || []).includes(key);
   const ru = roundUpForMonth(state, key);
@@ -179,10 +250,13 @@ export function renderSavings(state, root) {
     + '<button type="button" class="btn small' + (mode === 'reverse' ? ' primary' : ' ghost') + '" data-ch-mode="reverse">Reverse · $52 → $1</button>'
     + '<button type="button" class="btn small' + (mode === 'flat' ? ' primary' : ' ghost') + '" data-ch-mode="flat">Flat · $10 a week</button>'
     + (next ? '<button type="button" class="btn small" data-ch-pay-next="1">Pay week ' + next + ' (' + money(weekAmount(mode, next)) + ')</button>' : '<span class="pill">Challenge complete — $' + ch.target.toLocaleString('en-US') + ' saved!</span>')
+    + (missed.length ? ' <button type="button" class="btn small" data-ch-catchup="1">Catch up ' + missed.length + ' missed weeks (' + money(missedTotal) + ')</button>' : '')
+    + (lastCatchUpWeeks.length ? ' <button type="button" class="btn small ghost" data-ch-catchup-undo="1">Undo catch-up</button>' : '')
     + '</div>'
     + '<div class="challenge-flex"><div class="challenge-ring">' + ringSVG(pct, '#1d6b4f') + '<div class="ring-label"><b>' + Math.round(pct) + '%</b><span>saved</span></div></div>'
     + '<div class="week-grid" role="group" aria-label="52 weeks">' + weekCells.join('') + '</div></div>'
-    + '<p class="muted small">Paid weeks are green. ' + money(ch.target - ch.saved) + ' still to go — at ' + money(weekAmount(mode, Math.max(1, next || 52))) + ' a week, the rest takes about ' + (next ? Math.max(1, 52 - ch.weeksDone) : 0) + ' more weeks. The money is yours to hold wherever you keep savings; this page is the record.</p></div>'
+    + '<p class="muted small">Paid weeks are green. ' + money(ch.target - ch.saved) + ' still to go — at ' + money(weekAmount(mode, Math.max(1, next || 52))) + ' a week, the rest takes about ' + (next ? Math.max(1, 52 - ch.weeksDone) : 0) + ' more weeks. The money is yours to hold wherever you keep savings; this page is the record.</p>'
+    + '<p class="muted small">It is week ' + cw.week + ' of ' + cw.year + ', so weeks 1–' + cw.week + ' should be paid by now. ' + (missed.length ? missed.length + ' of them slipped — weeks ' + weekRanges(missed) + ' — and catching up costs ' + money(missedTotal) + ' and marks them all paid at once. Weeks after this one have not slipped, they just have not come round yet, so they stay unpaid until their turn. Caught up by mistake? Undo puts exactly those weeks back to unpaid.' : 'No weeks have slipped — every week up to this one is paid.') + '</p></div>'
 
     + '<div class="grid two" style="margin-top:16px">'
     + '<div class="card"><h2>No-spend days — ' + monthLabel(key) + '</h2>'

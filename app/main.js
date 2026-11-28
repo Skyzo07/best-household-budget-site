@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar', 'when'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'envelope-review', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar', 'when'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar', 'when']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'envelope-review', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar', 'when']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -45,6 +45,7 @@ async function showView(route) {
   if (route === 'annual') (await import('./annual.js')).renderAnnual(state, root);
   if (route === 'savings') (await import('./savings.js')).renderSavings(state, root);
   if (route === 'envelopes') (await import('./envelopes.js')).renderEnvelopes(state, root);
+  if (route === 'envelope-review') (await import('./envelopereview.js')).renderEnvelopeReview(state, root);
   if (route === 'subscriptions') (await import('./subscriptions.js')).renderSubscriptions(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   if (route === 'forecast') (await import('./forecast.js')).renderForecast(state, root);
@@ -105,6 +106,13 @@ async function renderDebtfreeLive() {
 async function renderWhenLive() {
   if (currentRoute() !== 'when') return;
   (await import('./when.js')).renderWhen(state, $('#view-when'));
+}
+
+// Re-render just the Envelope review view (used after applying or
+// undoing suggested fills, or taking one envelope's suggestion).
+async function renderEnvelopeReviewLive() {
+  if (currentRoute() !== 'envelope-review') return;
+  (await import('./envelopereview.js')).renderEnvelopeReview(state, $('#view-envelope-review'));
 }
 
 // Re-render just the Money calendar view (used after picking a day,
@@ -1067,6 +1075,21 @@ app.addEventListener('click', async (e) => {
     if (next) { savings.toggleWeek(state, next); persist(); rerender(); }
     return;
   }
+  if (t.closest('[data-ch-catchup]')) {
+    const caught = savings.catchUpMissed(state);
+    persist();
+    rerender();
+    if (caught.count) window.alert('Caught up ' + caught.count + ' missed weeks — ' + money(caught.amount) + ' added to the challenge, ' + money(savings.challengeSaved(state).saved) + ' saved now.');
+    else window.alert('No weeks have slipped — every week up to this one is already paid.');
+    return;
+  }
+  if (t.closest('[data-ch-catchup-undo]')) {
+    const undone = savings.undoCatchUp(state);
+    persist();
+    rerender();
+    if (undone) window.alert('Catch-up undone — ' + undone + ' week' + (undone === 1 ? '' : 's') + ' back to unpaid.');
+    return;
+  }
   const modeBtn = t.closest('[data-ch-mode]');
   if (modeBtn) {
     savings.setChallengeMode(state, modeBtn.dataset.chMode);
@@ -1202,6 +1225,29 @@ app.addEventListener('click', async (e) => {
   if (envAdd) {
     pendingCategory = envAdd.dataset.envAdd;
     openTxDialog(null);
+    return;
+  }
+  // ---- Envelope review (v24, loaded on demand) ----
+  const envRevApply = t.closest('[data-envrev-apply]');
+  if (envRevApply) {
+    const envReview = await import('./envelopereview.js');
+    envReview.applySuggestedFills(state, state.currentMonth, [envRevApply.dataset.envrevApply]);
+    persist();
+    renderEnvelopeReviewLive();
+    return;
+  }
+  if (t.closest('[data-envrev-apply-all]')) {
+    const envReview = await import('./envelopereview.js');
+    envReview.applySuggestedFills(state, state.currentMonth, ['groceries', 'dining', 'transport', 'kids', 'fun', 'household']);
+    persist();
+    renderEnvelopeReviewLive();
+    return;
+  }
+  if (t.closest('[data-envrev-undo]')) {
+    const envReview = await import('./envelopereview.js');
+    envReview.undoAppliedFills(state);
+    persist();
+    renderEnvelopeReviewLive();
     return;
   }
   const priceAdd = t.closest('[data-price-add]');

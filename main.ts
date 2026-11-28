@@ -29,7 +29,8 @@
 // reports.js, debt.js, grocery.js, members.js, savings.js, envelopes.js,
 // subscriptions.js, forecast.js and review.js are fetched only when their nav link
 // is opened, so they do not count in the first load. v23 adds when.js
-// to that lazy list: when we spend, the spending rhythms page. Deterministic:
+// to that lazy list: when we spend, the spending rhythms page. v24 adds
+// envelopereview.js to that lazy list: the envelope review page. Deterministic:
 // the same input files always produce the same output bytes.
 // v13 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
 // members.js, savings.js, envelopes.js, subscriptions.js, forecast.js,
@@ -221,6 +222,20 @@
 // files (when.js lazy); whole app 31 files. Verified:
 // /tmp/bhb-v23-verify.mjs, 0 JS errors, 0 external requests; phone
 // scrollWidth 390 on When we spend and Forecast.
+// v24 adds envelopereview.js (lazy too): envelope review — November's
+// fills against what each envelope actually spent, over/under flags,
+// what rolled in and what rolls out, the three-month average spend per
+// envelope, and a suggested December fill per envelope (three-month
+// average rounded up to the next $5), with a one-click Apply that writes
+// the suggestions into December's real envelope fills plus Undo, and a
+// per-envelope Use button; plus a 52-week-challenge catch-up on the
+// Savings page — the missed weeks up to the current ISO week, their
+// cost, one press to pay them all, and an Undo. Screenshots re-shot
+// fresh for v24: dashboard, envelope review, when we spend, and
+// Where we shop at phone size. First load 6 files, target ≤ ~70 KB;
+// later by import() 25 files (envelopereview.js lazy); whole app 32
+// files. Verified: /tmp/bhb-v24-verify.mjs, 98/98 checks PASS, 0 JS errors, 0 external
+// requests; phone scrollWidth 390 on Envelope review and Stores.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
