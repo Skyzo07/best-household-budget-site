@@ -1,6 +1,6 @@
 // Hearth & Home Budget — views: dashboard, transactions, budgets,
 // savings goals and insights. Each view renders from state + current month.
-import { CATEGORIES, categoryById, envelopeTotals, money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, lastMonths, shiftMonth, todayISO } from './data.js';
+import { CATEGORIES, categoryById, envelopeTotals, money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, lastMonths, shiftMonth, subTotals, todayISO } from './data.js';
 import { drawDonut, drawBars, drawTrend, ringSVG } from './charts.js';
 
 function esc(s) {
@@ -126,6 +126,11 @@ export function renderDashboard(state, root) {
   const envT = envelopeTotals(state, key);
   const envStrip = '<div class="card" style="margin-top:16px"><h2>Cash envelopes <a href="#/envelopes">Open envelopes →</a></h2><div class="savings-strip"><p style="margin:0">Filled <b>' + money(envT.filled) + '</b> · spent <b>' + money(envT.spent) + '</b> · <b>' + money(envT.left) + '</b> still in the envelopes, ' + money(envT.rolled) + ' of it rolled over from last month</p><p style="margin:0">' + (envT.over.length ? '<b>' + envT.over.map((e) => esc(e.label)).join(', ') + '</b> ' + (envT.over.length > 1 ? 'are' : 'is') + ' empty — move cash in from a fuller envelope' : 'No envelope is empty') + ' · next month opens with <b>' + money(envT.nextFilled) + '</b></p><p style="margin:0"><a class="btn small ghost" href="#/envelopes">Move cash</a></p></div></div>';
 
+  // Subscription audit at a glance: what the household pays every
+  // month for subscriptions, and what the audit says could be saved.
+  const subT = subTotals(state, key);
+  const subStrip = '<div class="card" style="margin-top:16px"><h2>Subscription audit <a href="#/subscriptions">Audit subscriptions →</a></h2><div class="savings-strip"><p style="margin:0">' + subT.activeCount + ' subscriptions cost <b>' + money(subT.monthly) + ' a month</b> · ' + money(subT.yearly) + ' a year</p><p style="margin:0">' + (subT.totalSaving > 0 ? 'Cancel the ' + subT.cancelCount + ' unused and downgrade the ' + subT.downgradeCount + ' barely-used to save <b>' + money(subT.totalSaving) + ' a year</b>' : 'Every subscription earned its place this month — nothing to cancel') + '</p><p style="margin:0"><a class="btn small ghost" href="#/subscriptions">See the verdicts</a></p></div></div>';
+
   root.innerHTML =
     (state.sample ? '<div class="sample-note"><strong>Sample household loaded</strong> — the Hartono family’s November budget. Edit or delete anything, or press <strong>Reset sample data</strong> to start clean.</div>' : '')
     + '<div class="page-head"><div><h1>Your month at a glance</h1><p class="muted">' + monthLabel(key) + ' · Two incomes, two kids, one plan. Here is where the household stands right now.</p></div>'
@@ -175,6 +180,7 @@ export function renderDashboard(state, root) {
     + '<div class="card" style="margin-top:16px"><h2>Pocket money &amp; allowances <a href="#/members">Everyone’s page →</a></h2><p class="muted small" style="margin-top:0">Each person’s free-spending money for ' + monthLabel(key) + ' — counted from their own tagged spending. No questions asked, no category to justify.</p><div class="allow-grid">' + allowanceRows + '</div></div>'
     + savingsStrip
     + envStrip
+    + subStrip
     + (grocList.length ? '<div class="card" style="margin-top:16px"><h2>Groceries &amp; meals <a href="#/grocery">Plan &amp; list →</a></h2><p style="margin-top:0">Dinner is planned for all 7 nights this week. The grocery list stands at <b>' + money(grocToBuy) + ' still to buy</b> — ' + grocLeft + ' of ' + grocList.length + ' items left, ' + money(grocTotal) + ' in total. Tick items off in the store, then post the shop into Transactions with one press.</p></div>' : '');
   drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
 }

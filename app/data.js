@@ -341,11 +341,35 @@ export function ensureV2(state) {
   return state;
 }
 
+export function sampleSubscriptions() {
+  // Every subscription the Hartono household pays for, with the date it
+  // was last actually used. The audit's verdicts come from that date:
+  // used in the last 30 days -> keep; 31-60 days -> downgrade to a
+  // cheaper tier; over 60 days -> cancel. Amazon Prime is billed once a
+  // year ($139), the rest monthly; the monthly figure shown for Prime is
+  // its yearly price split across 12 months ($11.58).
+  return [
+    { id: 'sub-netflix', name: 'Netflix — Standard', category: 'Streaming', monthly: 15.49, billed: 'monthly', yearly: 0, lastUsed: '2026-11-27', status: 'active', downgraded: false },
+    { id: 'sub-spotify', name: 'Spotify — Family', category: 'Music', monthly: 16.99, billed: 'monthly', yearly: 0, lastUsed: '2026-11-28', status: 'active', downgraded: false },
+    { id: 'sub-disney', name: 'Disney+', category: 'Streaming', monthly: 13.99, billed: 'monthly', yearly: 0, lastUsed: '2026-11-02', status: 'active', downgraded: false },
+    { id: 'sub-youtube', name: 'YouTube Premium', category: 'Streaming', monthly: 13.99, billed: 'monthly', yearly: 0, lastUsed: '2026-11-25', status: 'active', downgraded: false },
+    { id: 'sub-icloud', name: 'iCloud+ — 200 GB', category: 'Cloud storage', monthly: 2.99, billed: 'monthly', yearly: 0, lastUsed: '2026-11-29', status: 'active', downgraded: false },
+    { id: 'sub-googleone', name: 'Google One — 100 GB', category: 'Cloud storage', monthly: 9.99, billed: 'monthly', yearly: 0, lastUsed: '2026-10-20', status: 'active', downgraded: false },
+    { id: 'sub-prime', name: 'Amazon Prime', category: 'Shopping', monthly: 11.58, billed: 'yearly', yearly: 139, lastUsed: '2026-11-24', status: 'active', downgraded: false },
+    { id: 'sub-gym', name: 'Riverside Fitness — gym', category: 'Health', monthly: 45, billed: 'monthly', yearly: 0, lastUsed: '2026-11-20', status: 'active', downgraded: false },
+    { id: 'sub-xbox', name: 'Xbox Game Pass', category: 'Gaming', monthly: 16.99, billed: 'monthly', yearly: 0, lastUsed: '2026-10-26', status: 'active', downgraded: false },
+    { id: 'sub-audible', name: 'Audible', category: 'Books & audio', monthly: 14.95, billed: 'monthly', yearly: 0, lastUsed: '2026-10-05', status: 'active', downgraded: false },
+    { id: 'sub-duolingo', name: 'Duolingo Plus', category: 'Learning', monthly: 12.99, billed: 'monthly', yearly: 0, lastUsed: '2026-09-28', status: 'active', downgraded: false },
+    { id: 'sub-natgeo', name: 'National Geographic — magazine', category: 'Magazines', monthly: 6.99, billed: 'monthly', yearly: 0, lastUsed: '2026-09-12', status: 'active', downgraded: false },
+    { id: 'sub-adobe', name: 'Adobe Creative Cloud', category: 'Apps', monthly: 22.99, billed: 'monthly', yearly: 0, lastUsed: '2026-11-22', status: 'active', downgraded: false },
+  ];
+}
+
 export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 6,
+    version: 7,
     sample: true,
     currentMonth: '2026-11',
     budgets,
@@ -362,6 +386,8 @@ export function sampleState() {
     payoffExtra: 50,
     grocery: { offset: 0, list: sampleGroceryList(), pantry: samplePantry(), overrides: {} },
     challenges: sampleChallenges(),
+    subscriptions: sampleSubscriptions(),
+    banked: {},
   };
 }
 
@@ -371,7 +397,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV6(parsed);
+    return ensureV7(parsed);
   } catch {
     return sampleState();
   }
@@ -497,5 +523,95 @@ export function ensureV6(state) {
   ensureV5(state);
   envelopeStore(state);
   state.version = 6;
+  return state;
+}
+
+// ---- Subscription audit (v7) ----
+// The last day of a month, as ISO — the audit measures "last used"
+// against the end of the month being viewed, so the verdicts are stable
+// no matter which day the page is opened.
+export function monthEndISO(key) {
+  const [y, m] = key.split('-').map(Number);
+  const last = new Date(y, m, 0).getDate();
+  return key + '-' + String(last).padStart(2, '0');
+}
+
+export function subscriptionStore(state) {
+  if (!Array.isArray(state.subscriptions)) state.subscriptions = sampleSubscriptions();
+  if (!state.banked || typeof state.banked !== 'object') state.banked = {};
+  return state.subscriptions;
+}
+
+// Days between two ISO dates (date2 minus date1), whole days.
+export function daysBetween(a, b) {
+  const ms = Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z');
+  return Math.floor(ms / 86400000);
+}
+
+// The audit's verdict, from how long ago the household last used it:
+// used in the last 30 days -> keep it; 31-60 days -> a cheaper tier
+// keeps the bits that are used; over 60 days -> cancel it.
+export function subVerdict(sub, refISO) {
+  const days = daysBetween(sub.lastUsed, refISO);
+  if (days > 60) return { kind: 'cancel', days, label: 'Cancel', note: 'Not used in ' + days + ' days — the money is going out and nothing is coming back' };
+  if (days > 30) return { kind: 'downgrade', days, label: 'Downgrade', note: 'Last used ' + days + ' days ago — a cheaper tier keeps the bits you actually use' };
+  return { kind: 'keep', days, label: 'Keep', note: 'Used ' + days + ' day' + (days === 1 ? '' : 's') + ' ago — earning its place' };
+}
+
+// What a subscription costs right now: a downgraded one costs half.
+// Yearly-billed ones (Prime) keep their yearly price, halved the same way.
+export function subMonthly(sub) {
+  const base = Number(sub.monthly) || 0;
+  return Math.round((sub.downgraded ? base / 2 : base) * 100) / 100;
+}
+
+export function subYearly(sub) {
+  if (sub.billed === 'yearly' && Number(sub.yearly) > 0) {
+    return Math.round((sub.downgraded ? sub.yearly / 2 : sub.yearly) * 100) / 100;
+  }
+  return Math.round(subMonthly(sub) * 12 * 100) / 100;
+}
+
+// Everything the audit page and the dashboard strip need: what the
+// household still pays, and what cancelling the flagged subscriptions
+// and downgrading the barely-used ones would save in a year. A
+// subscription already cancelled or already downgraded no longer counts
+// toward the saving — the saving is what is still on the table.
+export function subTotals(state, key) {
+  const ref = monthEndISO(key);
+  const subs = subscriptionStore(state);
+  const active = subs.filter((s) => s.status !== 'cancelled');
+  const cancelled = subs.filter((s) => s.status === 'cancelled');
+  const round = (n) => Math.round(n * 100) / 100;
+  let monthly = 0, yearly = 0, cancelSaving = 0, downgradeSaving = 0;
+  let cancelCount = 0, downgradeCount = 0, keepCount = 0;
+  for (const s of active) {
+    monthly += subMonthly(s);
+    yearly += subYearly(s);
+    const v = subVerdict(s, ref);
+    if (v.kind === 'cancel') { cancelCount++; cancelSaving += subYearly(s); }
+    else if (v.kind === 'downgrade') {
+      downgradeCount++;
+      if (!s.downgraded) downgradeSaving += subYearly(s) / 2;
+    } else keepCount++;
+  }
+  return {
+    activeCount: active.length, cancelledCount: cancelled.length,
+    monthly: round(monthly), yearly: round(yearly),
+    cancelCount, downgradeCount, keepCount,
+    cancelSaving: round(cancelSaving), downgradeSaving: round(downgradeSaving),
+    totalSaving: round(cancelSaving + downgradeSaving),
+    cancelledYearly: round(cancelled.reduce((a, s) => a + subYearly(s), 0)),
+  };
+}
+
+// Fill v7 fields into an older saved state so v1–v6 saves keep working.
+// v7 adds the subscription audit and the banked-allowance record; the
+// version bump records that the save has been seen by v7 code.
+export function ensureV7(state) {
+  if (!state) return sampleState();
+  ensureV6(state);
+  subscriptionStore(state);
+  state.version = 7;
   return state;
 }

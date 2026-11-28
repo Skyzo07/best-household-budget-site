@@ -28,6 +28,23 @@ account, no server, nothing leaves your browser. Built for the make.fun
   tagged transactions. A bill calendar lays the whole month out as a grid,
   one pressable chip per bill on its due day — press a chip to mark that
   bill paid.
+- **Subscription audit** — thirteen subscriptions, $204.93 a month
+  ($2,459.20 a year), each judged on one question: when did anyone
+  last use it? Used in the last 30 days is **Keep**; 31–60 days is
+  **Downgrade** to a cheaper tier (half price); over 60 days is
+  **Cancel**. Duolingo Plus (63 days) and National Geographic (79
+  days) are flagged to cancel — $239.76 a year; Google One, Xbox Game
+  Pass and Audible are flagged to downgrade — another $251.58 a year,
+  **$491.34 a year in total**. Every verdict is a working control:
+  cancel moves a subscription to the Cancelled list and drops the
+  monthly total at once (Restore brings it straight back), downgrade
+  halves its price, “I used it — keep” flips a wrong verdict, “Cancel
+  the flagged now” cancels all of them in one press, and the add form
+  judges a new subscription on its last-used date the moment it lands.
+  A category split shows where the money goes (Streaming is the
+  biggest slice), and the Dashboard shows the audit at a glance. Bills
+  tells you when a payment is due; this page tells you whether the
+  payment should exist at all.
 - **Household members** — one page per person (Maya, Daniel, Sofia, Liam):
   their monthly allowance, what they have spent from tagged transactions,
   what is left, their biggest spend this month and a six-month spending
@@ -37,7 +54,11 @@ account, no server, nothing leaves your browser. Built for the make.fun
   tagged to them. Add a member (name, role, allowance) and they get a page
   of their own; remove one and their tagged transactions stay on record.
   Every transaction now has a "Spent by" picker — leave it on Household
-  (shared) for rent, bills and the weekly shop.
+  (shared) for rent, bills and the weekly shop. **Bank the unspent
+  allowance:** what a person did not spend — Sofia has $0.50 left in
+  November and $125.50 unspent across six months — can be banked into
+  the Emergency fund goal with one press; a month can only be banked
+  once, and the Goals page shows the banked money at once.
 - **Groceries & meals** — a weekly dinner plan for four (two rotating
   weeks; edit any dish or its cost and the week total updates), a priced
   grocery list with a running total checked against the weekly grocery
@@ -96,9 +117,10 @@ account, no server, nothing leaves your browser. Built for the make.fun
 - **Your data stays yours** — everything is saved in `localStorage` on your
   own device. Sample data for the Hartono family (two incomes, two kids) is
   pre-loaded so every feature works on first open; reset it any time. Older
-  v1/v2/v3/v4/v5 saves are migrated automatically — bills, rules, allowances,
-  debts, grocery list, pantry, challenges and now cash envelopes are added
-  without losing your transactions.
+  v1/v2/v3/v4/v5/v6 saves are migrated automatically — bills, rules,
+  allowances, debts, grocery list, pantry, challenges, cash envelopes and
+  now subscriptions and banked allowances are added without losing your
+  transactions.
 
 ## Tech
 
@@ -106,15 +128,17 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The seven newer sections are one-job
+  (routing, dialogs, CRUD, export). The eight newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar),
   `annual.js` (year overview), `reports.js` (printable summary, debt-payoff
   planner), `grocery.js` (meal plan, grocery list, pantry, staple price
   history), `members.js` (household members — one page per person, allowance
-  history, tagged spending), `savings.js` (savings challenges — 52-week,
+  history, tagged spending, banking unspent allowances), `savings.js` (savings challenges — 52-week,
   no-spend days, round-up pot), `envelopes.js` (cash envelopes — fills,
-  rollovers, transfers, per-envelope spending). `favicon.ico` is a hand-drawn
+  rollovers, transfers, per-envelope spending), `subscriptions.js`
+  (subscription audit — keep / downgrade / cancel verdicts, totals and
+  savings, add / cancel / restore / downgrade). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -141,10 +165,10 @@ to the output directory and writes `dossier.json` with the vendored
 
 ## Screenshots
 
-- `screenshots/1-dashboard.png` — Dashboard, incl. the new envelopes strip (desktop, 1280×800)
-- `screenshots/2-envelopes.png` — Cash envelopes: six envelopes, move-cash control, December preview (desktop, 1280×800)
-- `screenshots/3-grocery.png` — Groceries & meals, with the staple price-history table (desktop, 1280×800)
-- `screenshots/4-envelopes-phone.png` — Cash envelopes on a phone (390×844)
+- `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips (desktop, 1280×800)
+- `screenshots/2-subscriptions.png` — Subscription audit: verdicts, yearly savings, cancel-the-flagged control (desktop, 1280×800)
+- `screenshots/3-envelopes.png` — Cash envelopes: six envelopes, move-cash control, December preview (desktop, 1280×800)
+- `screenshots/4-members-phone.png` — Sofia's member page, with the bank-the-unspent-allowance card, on a phone (390×844)
 
 ## License
 

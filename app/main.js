@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'annual', 'insights', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -45,6 +45,7 @@ async function showView(route) {
   if (route === 'annual') (await import('./annual.js')).renderAnnual(state, root);
   if (route === 'savings') (await import('./savings.js')).renderSavings(state, root);
   if (route === 'envelopes') (await import('./envelopes.js')).renderEnvelopes(state, root);
+  if (route === 'subscriptions') (await import('./subscriptions.js')).renderSubscriptions(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   window.scrollTo(0, 0);
 }
@@ -504,6 +505,50 @@ app.addEventListener('click', async (e) => {
     rerender();
     if (moved > 0) window.alert('Moved ' + money(moved) + ' from the pot into the emergency fund goal.');
     else window.alert('The pot is empty — sweep this month’s round-ups first.');
+    return;
+  }
+  // ---- Subscription audit (loaded on demand) ----
+  const subBtn = t.closest('[data-sub-cancel],[data-sub-restore],[data-sub-downgrade],[data-sub-undowngrade],[data-sub-used],[data-sub-cancel-flagged],[data-sub-reset],[data-sub-add]');
+  if (subBtn) {
+    const subs = await import('./subscriptions.js');
+    if (subBtn.dataset.subCancel !== undefined) { subs.cancelSub(state, subBtn.dataset.subCancel); persist(); rerender(); return; }
+    if (subBtn.dataset.subRestore !== undefined) { subs.restoreSub(state, subBtn.dataset.subRestore); persist(); rerender(); return; }
+    if (subBtn.dataset.subDowngrade !== undefined) { subs.downgradeSub(state, subBtn.dataset.subDowngrade); persist(); rerender(); return; }
+    if (subBtn.dataset.subUndowngrade !== undefined) { subs.undoDowngrade(state, subBtn.dataset.subUndowngrade); persist(); rerender(); return; }
+    if (subBtn.dataset.subUsed !== undefined) { subs.markUsed(state, subBtn.dataset.subUsed); persist(); rerender(); return; }
+    if (subBtn.dataset.subCancelFlagged !== undefined) {
+      const n = subs.cancelFlagged(state);
+      persist();
+      rerender();
+      if (n) window.alert('Cancelled ' + n + ' unused subscription' + (n === 1 ? '' : 's') + ' — see the Cancelled list below for what you now save.');
+      else window.alert('Nothing flagged to cancel — the audit is clean.');
+      return;
+    }
+    if (subBtn.dataset.subReset !== undefined) {
+      if (window.confirm('Reset the subscriptions back to the sample household’s list? Your cancels, downgrades and added subscriptions go away.')) {
+        subs.resetSubs(state);
+        persist();
+        rerender();
+      }
+      return;
+    }
+    if (subBtn.dataset.subAdd !== undefined) {
+      const added = subs.addSub(state, $('#sub-add-name').value, $('#sub-add-cost').value, $('#sub-add-cat').value, $('#sub-add-used').value, $('#sub-add-billed').value);
+      persist();
+      rerender();
+      if (added) window.alert('Added: ' + added.name + ' — ' + money(added.monthly) + ' a month. The audit has already judged it.');
+      return;
+    }
+  }
+  // ---- Bank unspent allowance into the emergency fund (members) ----
+  const bankBtn = t.closest('[data-bank-unspent]');
+  if (bankBtn) {
+    const members = await import('./members.js');
+    const banked = members.bankUnspent(state, bankBtn.dataset.bankUnspent, state.currentMonth);
+    persist();
+    rerender();
+    if (banked > 0) window.alert('Banked ' + money(banked) + ' of unspent allowance into the Emergency fund goal.');
+    else window.alert('Nothing to bank — this month’s allowance is already spent, or already banked.');
     return;
   }
   // ---- Cash envelopes (loaded on demand) ----

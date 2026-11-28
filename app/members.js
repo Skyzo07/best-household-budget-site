@@ -44,6 +44,47 @@ export function addMember(state, name, role, monthly) {
   return member;
 }
 
+// ---- Banking unspent allowance (v7) ----
+// What a person did not spend of their allowance is not lost —
+// "bank it" moves this month's unspent allowance into the Emergency
+// fund goal, and the record (state.banked, keyed person|month) stops
+// the same month being banked twice. The goal's saved figure moves
+// at once, so the Goals page shows the banked money.
+export function memberBankedTotal(state, whoId) {
+  if (!state.banked) return 0;
+  let total = 0;
+  for (const k of Object.keys(state.banked)) {
+    if (k.startsWith(whoId + '|')) total += Number(state.banked[k]) || 0;
+  }
+  return Math.round(total * 100) / 100;
+}
+
+export function memberBankedThisMonth(state, whoId, key) {
+  if (!state.banked) return 0;
+  return Number(state.banked[whoId + '|' + key]) || 0;
+}
+
+export function bankUnspent(state, whoId, key) {
+  const person = (state.allowances || []).find((a) => a.id === whoId);
+  if (!person) return 0;
+  if (memberBankedThisMonth(state, whoId, key) > 0) return 0;
+  const left = Math.round((person.monthly - memberSpent(state, key, whoId)) * 100) / 100;
+  if (left <= 0) return 0;
+  const goal = (state.goals || []).find((g) => g.id === 'goal-emergency') || (state.goals || [])[0];
+  if (!goal) return 0;
+  goal.saved = Math.round((goal.saved + left) * 100) / 100;
+  if (!state.banked) state.banked = {};
+  state.banked[whoId + '|' + key] = left;
+  state.sample = false;
+  return left;
+}
+
+// Unspent allowance across six months — the money a person quietly
+// saved by not spending their whole allowance.
+export function memberSixMonthUnspent(state, whoId) {
+  return memberHistory(state, whoId).reduce((a, h) => a + Math.max(0, h.left), 0);
+}
+
 // Small inline sparkline of six monthly values, drawn as SVG.
 function sparkSVG(values, color) {
   const max = Math.max.apply(null, values.concat([1]));
@@ -71,6 +112,7 @@ function memberCard(state, key, a) {
     + '<p style="margin:12px 0 4px"><b>' + money(spent) + '</b> spent of <b>' + money(a.monthly) + '</b> allowance · 6-mo avg ' + money(avg) + '</p>'
     + '<div class="bar"><i class="' + (over ? 'over' : pct > 85 ? 'amber' : '') + '" style="width:' + pct.toFixed(1) + '%"></i></div>'
     + '<p class="muted small" style="margin:10px 0 4px">' + (mine ? 'Biggest this month: ' + esc(mine.description) + ' — ' + money(mine.amount) + ' (' + esc(categoryById(mine.category).label) + ')' : 'Nothing tagged to ' + esc(a.who) + ' yet this month.') + '</p>'
+    + '<p class="muted small" style="margin:4px 0">' + (memberBankedTotal(state, a.id) > 0 ? 'Banked ' + money(memberBankedTotal(state, a.id)) + ' of unspent allowance into savings so far' : 'Nothing banked into savings yet — unspent allowance can be banked from ' + esc(a.who) + '’s page.') + '</p>'
     + '<div class="member-spark">' + sparkSVG(hist, color) + '<span class="muted small">spending, last 6 months</span></div>'
     + '<p style="margin:10px 0 0"><a class="btn small ghost" href="#/members/' + a.id + '">Open ' + esc(a.who) + '’s page →</a> <button class="btn small" data-member-spend="' + a.id + '">+ Add spending</button></p>'
     + '</div>';
@@ -115,6 +157,22 @@ function renderDetail(state, root, memberId) {
   const mine = monthTransactions(state, key).filter((t) => t.who === a.id)
     .sort((x, y) => y.date.localeCompare(x.date) || y.id.localeCompare(x.id));
   const color = a.id === 'maya' ? '#1d6b4f' : a.id === 'daniel' ? '#2b5f8a' : a.id === 'sofia' ? '#c25e7a' : '#7a5c1e';
+  // Banking: what of this month's allowance is still unspent, what six
+  // months of not spending the whole allowance adds up to, and what has
+  // already been banked into the emergency fund.
+  const sixUnspent = memberSixMonthUnspent(state, a.id);
+  const bankedTotal = memberBankedTotal(state, a.id);
+  const bankedThis = memberBankedThisMonth(state, a.id, key);
+  const emergencyGoal = (state.goals || []).find((g) => g.id === 'goal-emergency') || (state.goals || [])[0];
+  const bankCard = '<div class="card" style="margin-top:16px"><h2>Bank the unspent allowance</h2>'
+    + '<p style="margin-top:0">An allowance you do not spend is money saved — it just needs moving somewhere it counts. ' + esc(a.who) + ' has <b>' + money(Math.max(0, left)) + ' unspent</b> in ' + monthLabel(key) + ', and <b>' + money(sixUnspent) + ' unspent across the last six months</b> by not spending the whole allowance every month.</p>'
+    + '<p class="muted small">Banking moves this month’s unspent allowance into the <b>' + esc(emergencyGoal ? emergencyGoal.name : 'emergency fund') + '</b> goal (' + money(emergencyGoal ? emergencyGoal.saved : 0) + ' saved of ' + money(emergencyGoal ? emergencyGoal.target : 0) + '), and the Goals page shows it at once. A month can only be banked once — the button knows.</p>'
+    + (bankedThis > 0
+      ? '<p><span class="pill">Banked ' + money(bankedThis) + ' from ' + monthLabel(key) + ' ✓</span> ' + (bankedTotal > bankedThis ? '<span class="muted small">' + money(bankedTotal) + ' banked in total across all months.</span>' : '<span class="muted small">First bank — well done.</span>') + '</p>'
+      : left > 0
+        ? '<p><button type="button" class="btn small" data-bank-unspent="' + a.id + '">Bank ' + money(left) + ' of unspent allowance → ' + esc(emergencyGoal ? emergencyGoal.name : 'savings') + '</button> <span class="muted small">The allowance resets next month either way — banked money stays saved.</span></p>'
+        : '<p class="muted small">Nothing to bank this month — the allowance is spent out. Spend a little less next month and the button appears.</p>')
+    + '</div>';
   const histRows = hist.map((h) => {
     const status = h.spent > h.allowance ? '<span class="pill over">Over by ' + money(h.spent - h.allowance) + '</span>'
       : h.spent > h.allowance * 0.85 ? '<span class="pill warn">Almost all used</span>' : '<span class="pill">Kept ' + money(Math.max(0, h.left)) + '</span>';
@@ -142,6 +200,7 @@ function renderDetail(state, root, memberId) {
     + '<div class="grid two"><div class="card"><h2>Allowance vs spending — last 6 months</h2><div class="chart-wrap"><canvas id="chart-member" class="chart" height="200"></canvas></div>'
     + '<p class="muted small">Green bars are inside the allowance; red bars went over it. ' + esc(a.who) + '’s allowance is ' + money(a.monthly) + ' a month.</p></div>'
     + '<div class="card"><h2>Allowance history</h2><table><thead><tr><th>Month</th><th class="amount">Allowance</th><th class="amount">Spent</th><th class="amount">Left</th><th>Result</th></tr></thead><tbody>' + histRows + '</tbody></table></div></div>'
+    + bankCard
     + '<div class="card" style="margin-top:16px"><h2>' + esc(a.who) + '’s transactions — ' + monthLabel(key) + '</h2>' + txRows
     + '<p class="muted small">Switch months at the top of the page to see ' + esc(a.who) + '’s spending in any other month. Shared household costs (rent, bills, the weekly shop) are not tagged to anyone and never appear here.</p></div>';
   const canvas = root.querySelector('#chart-member');
