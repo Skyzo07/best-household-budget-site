@@ -25,7 +25,19 @@ account, no server, nothing leaves your browser. Built for the make.fun
   recurring rules that post one real transaction into the current month
   ("Post now" per rule, "Post all due" for the month) — never twice.
   Pocket-money allowances per person, with spending counted from their own
-  tagged transactions.
+  tagged transactions. A bill calendar lays the whole month out as a grid,
+  one pressable chip per bill on its due day — press a chip to mark that
+  bill paid.
+- **Household members** — one page per person (Maya, Daniel, Sofia, Liam):
+  their monthly allowance, what they have spent from tagged transactions,
+  what is left, their biggest spend this month and a six-month spending
+  sparkline. Open a person's page for an allowance-vs-spending chart, a
+  six-month allowance history table and their own transactions for the
+  month — plus "Add spending", which opens the transaction form already
+  tagged to them. Add a member (name, role, allowance) and they get a page
+  of their own; remove one and their tagged transactions stay on record.
+  Every transaction now has a "Spent by" picker — leave it on Household
+  (shared) for rent, bills and the weekly shop.
 - **Groceries & meals** — a weekly dinner plan for four (two rotating
   weeks; edit any dish or its cost and the week total updates), a priced
   grocery list with a running total checked against the weekly grocery
@@ -52,7 +64,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
 - **Your data stays yours** — everything is saved in `localStorage` on your
   own device. Sample data for the Hartono family (two incomes, two kids) is
   pre-loaded so every feature works on first open; reset it any time. Older
-  v1/v2 saves are migrated automatically — bills, rules, allowances, debts,
+  v1/v2/v3 saves are migrated automatically — bills, rules, allowances, debts,
   grocery list and pantry are added without losing your transactions.
 
 ## Tech
@@ -61,11 +73,12 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage),
   `charts.js` (hand-drawn canvas donut / bars / trend), `views.js`
   (dashboard, transactions, budgets, goals, insights), `main.js` (routing,
-  dialogs, CRUD, export). The four newer sections are one-job files loaded
+  dialogs, CRUD, export). The five newer sections are one-job files loaded
   only when opened, so they stay out of the first load: `bills.js` (bills,
-  recurring rules, allowances), `annual.js` (year overview), `reports.js`
+  recurring rules, allowances, bill calendar), `annual.js` (year overview), `reports.js`
   (printable summary, debt-payoff planner), `grocery.js` (meal plan,
-  grocery list, pantry). `favicon.ico` is a hand-drawn
+  grocery list, pantry), `members.js` (household members — one page per
+  person, allowance history, tagged spending). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -93,9 +106,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard (desktop, 1280×800)
-- `screenshots/2-budgets.png` — Budgets, with six-month sparklines (desktop, 1280×800)
-- `screenshots/3-grocery.png` — Groceries & meals: dinner plan, priced list, pantry (desktop, 1280×800)
-- `screenshots/4-transactions-phone.png` — Transactions (phone, 390×844)
+- `screenshots/2-members.png` — Household members: four people, allowances, sparklines (desktop, 1280×800)
+- `screenshots/3-bills.png` — Bills & recurring, with the bill calendar (desktop, 1280×800)
+- `screenshots/4-member-phone.png` — Sofia's page: allowance vs spending, history, her transactions (phone, 390×844)
 
 ## License
 

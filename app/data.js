@@ -278,6 +278,18 @@ export function samplePantry() {
   ];
 }
 
+// Fill v4 fields into an older saved state so v1–v3 saves keep working.
+// v4 adds nothing to the stored shape — members are the allowances v2
+// already saved, and transactions gained an optional "who" tag — but the
+// version bump records that the save has been seen by v4 code.
+export function ensureV4(state) {
+  if (!state) return sampleState();
+  ensureV3(state);
+  if (!Array.isArray(state.allowances)) state.allowances = sampleAllowances();
+  state.version = 4;
+  return state;
+}
+
 // Fill v3 fields into an older saved state so v1/v2 saves keep working.
 export function ensureV3(state) {
   if (!state) return sampleState();
@@ -308,7 +320,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 3,
+    version: 4,
     sample: true,
     currentMonth: '2026-11',
     budgets,
@@ -333,7 +345,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV3(parsed);
+    return ensureV4(parsed);
   } catch {
     return sampleState();
   }

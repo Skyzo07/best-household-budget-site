@@ -20,6 +20,7 @@
       <a href="#/budgets" data-nav="budgets">Budgets</a>
       <a href="#/bills" data-nav="bills">Bills &amp; recurring</a>
       <a href="#/grocery" data-nav="grocery">Groceries &amp; meals</a>
+      <a href="#/members" data-nav="members">Household members</a>
       <a href="#/goals" data-nav="goals">Savings goals</a>
       <a href="#/annual" data-nav="annual">Annual</a>
       <a href="#/insights" data-nav="insights">Insights</a>
@@ -39,6 +40,7 @@
   <section id="view-budgets" class="view" hidden></section>
   <section id="view-bills" class="view" hidden></section>
   <section id="view-grocery" class="view" hidden></section>
+  <section id="view-members" class="view" hidden></section>
   <section id="view-goals" class="view" hidden></section>
   <section id="view-annual" class="view" hidden></section>
   <section id="view-insights" class="view" hidden></section>
@@ -67,6 +69,7 @@
       <label>Category <select id="tx-category" name="category"></select></label>
       <label>Date <input id="tx-date" name="date" type="date" required></label>
     </div>
+    <label>Spent by <select id="tx-who" name="who"></select></label>
     <label>Note (optional) <input id="tx-note" name="note" type="text" maxlength="120" placeholder="e.g. Costco run"></label>
     <p class="form-error" id="tx-error" hidden></p>
     <div class="dialog-actions">
@@ -88,6 +91,22 @@
     <div class="dialog-actions">
       <button type="button" class="btn ghost" id="groc-cancel">Cancel</button>
       <button type="submit" class="btn primary">Add to list</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="member-dialog">
+  <form id="member-form" method="dialog">
+    <h2 id="member-dialog-title">Add household member</h2>
+    <label>Name <input id="member-name" type="text" required maxlength="40" placeholder="e.g. Sofia"></label>
+    <div class="form-row">
+      <label>Role <input id="member-role" type="text" maxlength="40" placeholder="e.g. Age 11 · school"></label>
+      <label>Monthly allowance ($) <input id="member-monthly" type="number" min="1" step="1" required placeholder="25"></label>
+    </div>
+    <p class="form-error" id="member-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn ghost" id="member-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Add member</button>
     </div>
   </form>
 </dialog>

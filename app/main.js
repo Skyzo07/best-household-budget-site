@@ -13,11 +13,19 @@ const app = $('#app');
 
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
-  return ['transactions', 'budgets', 'bills', 'grocery', 'goals', 'annual', 'insights', 'reports'].includes(h) ? h : 'dashboard';
+  const base = h.split('/')[0];
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
+}
+
+// Person id from a #/members/<id> hash, or '' on the members overview.
+function currentMemberId() {
+  const h = location.hash.replace(/^#\/?/, '');
+  const parts = h.split('/');
+  return parts[0] === 'members' && parts[1] ? parts[1] : '';
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'goals', 'annual', 'insights', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'annual', 'insights', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -33,6 +41,7 @@ async function showView(route) {
   // New sections load on demand so the first load stays small.
   if (route === 'bills') (await import('./bills.js')).renderBills(state, root);
   if (route === 'grocery') (await import('./grocery.js')).renderGrocery(state, root);
+  if (route === 'members') (await import('./members.js')).renderMembers(state, root, currentMemberId());
   if (route === 'annual') (await import('./annual.js')).renderAnnual(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   window.scrollTo(0, 0);
@@ -73,11 +82,19 @@ const txForm = $('#tx-form');
 function fillCategorySelect(select, selected) {
   select.innerHTML = CATEGORIES.map((c) => '<option value="' + c.id + '"' + (c.id === selected ? ' selected' : '') + '>' + c.label + '</option>').join('');
 }
+// Set by an "Add spending" button on a member's page so the dialog opens
+// already tagged to that person; cleared on save.
+let pendingWho = '';
+function fillWhoSelect(select, selected) {
+  const opts = ['<option value="">Household (shared)</option>'].concat((state.allowances || []).map((a) => '<option value="' + a.id + '"' + (a.id === selected ? ' selected' : '') + '>' + a.who + '</option>'));
+  select.innerHTML = opts.join('');
+}
 function openTxDialog(tx) {
   editingTxId = tx ? tx.id : null;
   $('#tx-dialog-title').textContent = tx ? 'Edit transaction' : 'Add transaction';
   $('#tx-error').hidden = true;
   fillCategorySelect($('#tx-category'), tx ? tx.category : 'groceries');
+  fillWhoSelect($('#tx-who'), tx ? (tx.who || '') : (pendingWho || ''));
   $('#tx-desc').value = tx ? tx.description : '';
   $('#tx-amount').value = tx ? tx.amount : '';
   $('#tx-kind').value = tx ? tx.kind : 'expense';
@@ -94,7 +111,7 @@ txForm.addEventListener('submit', (e) => {
   if (!desc) { err.textContent = 'Please give the transaction a description.'; err.hidden = false; return; }
   if (!amount || amount <= 0) { err.textContent = 'Amount must be more than $0.'; err.hidden = false; return; }
   if (!date) { err.textContent = 'Please pick a date.'; err.hidden = false; return; }
-  const data = { description: desc, amount: Math.round(amount * 100) / 100, kind: $('#tx-kind').value, category: $('#tx-category').value, date, note: $('#tx-note').value.trim() };
+  const data = { description: desc, amount: Math.round(amount * 100) / 100, kind: $('#tx-kind').value, category: $('#tx-category').value, date, note: $('#tx-note').value.trim(), who: $('#tx-who').value || '' };
   if (editingTxId) {
     const tx = state.transactions.find((t) => t.id === editingTxId);
     if (tx) Object.assign(tx, data);
@@ -102,6 +119,7 @@ txForm.addEventListener('submit', (e) => {
     state.transactions.push(Object.assign({ id: uid('tx') }, data));
     state.currentMonth = data.date.slice(0, 7);
   }
+  pendingWho = '';
   state.sample = false;
   persist();
   txDialog.close();
@@ -263,6 +281,26 @@ grocForm.addEventListener('submit', (e) => {
 });
 $('#groc-cancel').addEventListener('click', () => grocDialog.close());
 
+// ---- Member dialog ----
+const memberDialog = $('#member-dialog');
+const memberForm = $('#member-form');
+memberForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = $('#member-name').value.trim();
+  const role = $('#member-role').value.trim();
+  const monthly = Number($('#member-monthly').value);
+  const err = $('#member-error');
+  if (!name) { err.textContent = 'Please give the member a name.'; err.hidden = false; return; }
+  if (!monthly || monthly <= 0) { err.textContent = 'Monthly allowance must be more than $0.'; err.hidden = false; return; }
+  const members = await import('./members.js');
+  const m = members.addMember(state, name, role, Math.round(monthly * 100) / 100);
+  persist();
+  memberDialog.close();
+  location.hash = '#/members/' + m.id;
+  rerender();
+});
+$('#member-cancel').addEventListener('click', () => memberDialog.close());
+
 // ---- Delegated clicks ----
 app.addEventListener('click', async (e) => {
   const t = e.target;
@@ -292,6 +330,30 @@ app.addEventListener('click', async (e) => {
     $('#groc-error').hidden = true;
     $('#groc-name').value = ''; $('#groc-qty').value = 1; $('#groc-price').value = '';
     grocDialog.showModal();
+    return;
+  }
+  if (t.id === 'btn-add-member') {
+    $('#member-error').hidden = true;
+    $('#member-name').value = ''; $('#member-role').value = ''; $('#member-monthly').value = '';
+    memberDialog.showModal();
+    return;
+  }
+  const memberSpend = t.closest('[data-member-spend]');
+  if (memberSpend) {
+    const a = (state.allowances || []).find((x) => x.id === memberSpend.dataset.memberSpend);
+    if (a) { pendingWho = a.id; openTxDialog(null); }
+    return;
+  }
+  const memberDel = t.closest('[data-member-del]');
+  if (memberDel) {
+    const a = (state.allowances || []).find((x) => x.id === memberDel.dataset.memberDel);
+    if (a && window.confirm('Remove ' + a.who + ' from the household? Their tagged transactions stay in the records, but the allowance and page go away.')) {
+      state.allowances = (state.allowances || []).filter((x) => x.id !== a.id);
+      state.sample = false;
+      persist();
+      if (currentRoute() === 'members' && currentMemberId() === a.id) location.hash = '#/members';
+      rerender();
+    }
     return;
   }
   if (t.id === 'btn-buy-list' || t.id === 'btn-buy-list-2') {

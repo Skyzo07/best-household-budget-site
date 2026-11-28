@@ -184,9 +184,29 @@ td input[type="text"] { width: 100%; font: inherit; padding: 6px 8px; border: 1p
 .inline-label { font-weight: 600; }
 .inline-label input { display: inline-block; width: 110px; font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; }
 
+/* ---- household members + bill calendar (v4) ---- */
+.member-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.member-card h3 { font-size: 1.15rem; }
+.member-top { display: flex; align-items: center; gap: 12px; }
+.member-top h3 { margin: 0; }
+.member-top .pill { margin-left: auto; }
+.member-ava { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 1.4rem; font-weight: 800; flex: none; }
+.member-spark { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-head { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); text-align: center; padding: 4px 0; }
+.cal-cell { min-height: 64px; border: 1px solid #edf1ed; border-radius: 9px; padding: 5px 6px; background: #fbfdfb; display: flex; flex-direction: column; gap: 4px; }
+.cal-cell.blank { background: transparent; border-color: transparent; }
+.cal-cell.has-bills { background: var(--gold-soft); border-color: #ecd9a8; }
+.cal-day { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.cal-chip { display: block; width: 100%; text-align: left; border: 0; border-radius: 6px; padding: 3px 6px; font-size: .74rem; font-weight: 600; cursor: pointer; line-height: 1.3; }
+.cal-chip.due { background: #f3dfa9; color: #6d4a00; }
+.cal-chip.due:hover { background: #eed28a; }
+.cal-chip.paid { background: var(--green-soft); color: var(--green-deep); text-decoration: line-through; }
+.cal-chip.over { background: var(--red-soft); color: var(--red); }
+
 /* ---- print: only the monthly summary ---- */
 @media print {
-  .topbar, .foot, .btn, .month-switch, #tx-dialog, #goal-dialog, #bill-dialog, #rule-dialog, #debt-dialog, #groc-dialog { display: none !important; }
+  .topbar, .foot, .btn, .month-switch, #tx-dialog, #goal-dialog, #bill-dialog, #rule-dialog, #debt-dialog, #groc-dialog, #member-dialog { display: none !important; }
   body { background: #fff; }
   .card { box-shadow: none; }
 }

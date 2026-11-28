@@ -96,6 +96,34 @@ export function allowanceSpent(state, key, whoId) {
   return spent;
 }
 
+// ---- Bill calendar: the month as a grid, one chip per bill on its due day. ----
+// A chip is a real button — pressing it marks that bill paid (or undoes it),
+// so the calendar is a working view of the month, not a picture of one.
+export function billCalendar(state, key) {
+  const [y, m] = key.split('-').map(Number);
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const firstWeekday = new Date(y, m - 1, 1).getDay();
+  const bills = billsForMonth(state, key);
+  const byDay = {};
+  for (const b of bills) (byDay[b.day] = byDay[b.day] || []).push(b);
+  let cells = '';
+  for (let i = 0; i < firstWeekday; i++) cells += '<div class="cal-cell blank"></div>';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const list = byDay[d] || [];
+    const chips = list.map((b) => {
+      const cls = b.paid ? 'paid' : b.overdue ? 'over' : 'due';
+      const mark = b.paid ? ' ✓' : '';
+      return '<button class="cal-chip ' + cls + '" data-bill-paid="' + b.id + '" title="' + esc(b.name) + ' — ' + money(b.amount) + (b.paid ? ' (paid, press to undo)' : ' (press to mark paid)') + '">' + esc(b.name.length > 22 ? b.name.slice(0, 21) + '…' : b.name) + ' · ' + money0(b.amount) + mark + '</button>';
+    }).join('');
+    cells += '<div class="cal-cell' + (list.length ? ' has-bills' : '') + '"><span class="cal-day">' + d + '</span>' + chips + '</div>';
+  }
+  const weekHeads = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((w) => '<div class="cal-head">' + w + '</div>').join('');
+  return '<div class="card" style="margin-top:16px"><h2>Bill calendar — ' + monthLabel(key) + '</h2>'
+    + '<p class="muted small" style="margin-top:0">Every bill on the day it falls due. Green is paid, gold is still to pay, red is overdue. Press any chip to mark that bill paid — or undo it.</p>'
+    + '<div class="cal-grid">' + weekHeads + cells + '</div>'
+    + '<p class="muted small">Bills due after today still show as “due in Nd” in the table below; the calendar is the quickest way to see which week of the month carries the most money.</p></div>';
+}
+
 export function renderBills(state, root) {
   const key = state.currentMonth;
   const totals = billsTotals(state, key);
@@ -153,14 +181,15 @@ export function renderBills(state, root) {
     + '<div class="card kpi ' + (totals.unpaid > 0 ? 'warn' : '') + '"><div class="kpi-label">Still to pay</div><div class="kpi-value num">' + money(totals.unpaid) + '</div><div class="kpi-sub">' + (totals.next ? 'Next: ' + esc(totals.next.name) + ' — ' + money(totals.next.amount) + ' on day ' + totals.next.day : 'Nothing left this month') + '</div></div>'
     + '<div class="card kpi"><div class="kpi-label">Recurring not yet posted</div><div class="kpi-value num">' + dueCount + '</div><div class="kpi-sub">' + (dueCount ? 'Press “Post all due” below to write them into Transactions.' : 'Everything due is already in Transactions.') + '</div></div>'
     + '</div>'
-    + '<div class="card"><h2>Bills due in ' + monthLabel(key) + '</h2>'
+    + billCalendar(state, key)
+    + '<div class="card" style="margin-top:16px"><h2>Bills due in ' + monthLabel(key) + '</h2>'
     + (bills.length ? '<table><thead><tr><th>Bill</th><th>Due</th><th class="amount">Amount</th><th>Status</th><th></th></tr></thead><tbody>' + billRows + '</tbody></table>'
       : '<p class="empty">No bills yet — add the first one above.</p>')
     + '<p class="muted small">Tip: pay the big fixed bills (rent, insurance) the day payday lands, and keep the due dates spread across the month so one week never carries everything.</p></div>'
     + '<div class="grid two" style="margin-top:16px"><div class="card"><h2>Recurring rules</h2><p class="muted small">A rule posts one real transaction into the current month — once per month, never twice. Pause a rule instead of deleting it when a subscription is on hold.</p>'
     + '<ul class="tx-list">' + (ruleRows || '<li class="empty">No recurring rules yet.</li>') + '</ul>'
     + '<p style="margin-top:12px"><button class="btn" id="btn-post-due">Post all due now</button></p></div>'
-    + '<div class="card"><h2>Pocket money &amp; allowances</h2><p class="muted small">Each person gets a monthly amount to spend freely — no questions asked, no category to justify. Spent is counted from transactions tagged with that person.</p>'
+    + '<div class="card"><h2>Pocket money &amp; allowances <a href="#/members">Everyone’s page →</a></h2><p class="muted small">Each person gets a monthly amount to spend freely — no questions asked, no category to justify. Spent is counted from transactions tagged with that person.</p>'
     + allowanceRows
     + '<p class="muted small">Amounts save as you type. Kids learn the limit by seeing what is left; parents keep their own fun money separate from the household plan.</p></div></div>';
 }
