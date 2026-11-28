@@ -188,17 +188,21 @@ function sampleTransactions() {
 export function sampleBills() {
   // paidMonths records which months each bill was paid in. November 2026
   // is the current month: the early-month bills are paid, later ones due.
+  // autoPay is the v16 switch: a bill on auto-pay pays itself on its due
+  // day, so the household never has to remember it — rent, the utilities,
+  // internet, the phones and the car insurance are on it; the streaming,
+  // school fees, gym and home insurance are paid by hand.
   return [
-    { id: 'bill-rent', name: 'Rent — 3-bed house', category: 'housing', amount: 1450, day: 1, paidMonths: ['2026-11', '2026-10', '2026-09'] },
-    { id: 'bill-electric', name: 'Electricity bill', category: 'utilities', amount: 132.40, day: 3, paidMonths: ['2026-11', '2026-10'] },
-    { id: 'bill-water', name: 'Water bill', category: 'utilities', amount: 58.20, day: 3, paidMonths: ['2026-11', '2026-10'] },
-    { id: 'bill-streaming', name: 'Streaming + music', category: 'fun', amount: 16.99, day: 7, paidMonths: ['2026-11', '2026-10'] },
-    { id: 'bill-school', name: 'School fees — term 4', category: 'kids', amount: 185, day: 10, paidMonths: ['2026-11'] },
-    { id: 'bill-gym', name: 'Gym membership', category: 'health', amount: 45, day: 12, paidMonths: ['2026-11', '2026-10'] },
-    { id: 'bill-internet', name: 'Internet — fibre', category: 'utilities', amount: 79, day: 15, paidMonths: ['2026-11', '2026-10'] },
-    { id: 'bill-phones', name: 'Mobile phones — family plan', category: 'utilities', amount: 120, day: 18, paidMonths: ['2026-11', '2026-10'] },
-    { id: 'bill-car-ins', name: 'Car insurance', category: 'transport', amount: 95, day: 22, paidMonths: ['2026-10'] },
-    { id: 'bill-home-ins', name: 'Home insurance', category: 'housing', amount: 68, day: 25, paidMonths: ['2026-10'] },
+    { id: 'bill-rent', name: 'Rent — 3-bed house', category: 'housing', amount: 1450, day: 1, autoPay: true, paidMonths: ['2026-11', '2026-10', '2026-09'] },
+    { id: 'bill-electric', name: 'Electricity bill', category: 'utilities', amount: 132.40, day: 3, autoPay: true, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-water', name: 'Water bill', category: 'utilities', amount: 58.20, day: 3, autoPay: true, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-streaming', name: 'Streaming + music', category: 'fun', amount: 16.99, day: 7, autoPay: false, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-school', name: 'School fees — term 4', category: 'kids', amount: 185, day: 10, autoPay: false, paidMonths: ['2026-11'] },
+    { id: 'bill-gym', name: 'Gym membership', category: 'health', amount: 45, day: 12, autoPay: false, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-internet', name: 'Internet — fibre', category: 'utilities', amount: 79, day: 15, autoPay: true, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-phones', name: 'Mobile phones — family plan', category: 'utilities', amount: 120, day: 18, autoPay: true, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-car-ins', name: 'Car insurance', category: 'transport', amount: 95, day: 22, autoPay: true, paidMonths: ['2026-10'] },
+    { id: 'bill-home-ins', name: 'Home insurance', category: 'housing', amount: 68, day: 25, autoPay: false, paidMonths: ['2026-10'] },
   ];
 }
 
@@ -451,6 +455,59 @@ export function bigbuyStore(state) {
   return state.bigbuys;
 }
 
+// ---- Auto-save rules (v16) ----
+// Four standing instructions that move money on their own. `day` is
+// the day of the month the rule runs (0 = the last day). `runs` is how
+// many times the rule has run; `lastRun` is the last date it ran and
+// `lastAmount` what it moved that day; `monthly` is the ledger of what
+// it moved in each month, so a month with two runs counts both. The
+// totals on the Auto-save page are worked out from these records —
+// fixed rules: runs times amount; the round-up rule: the months in
+// its ledger.
+export function sampleAutoSave() {
+  return [
+    { id: 'as-emergency', name: 'Payday: $100 to the emergency fund', kind: 'fixed', amount: 100, destKind: 'goal', destId: 'goal-emergency', day: 1, active: true, lastRun: '2026-11-01', lastAmount: 100, runs: 11, monthly: { '2026-11': 100 } },
+    { id: 'as-washer', name: 'Payday: $80 to the washing machine', kind: 'fixed', amount: 80, destKind: 'bigbuy', destId: 'bb-washer', day: 1, active: true, lastRun: '2026-11-01', lastAmount: 80, runs: 3, monthly: { '2026-11': 80 } },
+    { id: 'as-car', name: 'Payday: $50 to the car deposit', kind: 'fixed', amount: 50, destKind: 'goal', destId: 'goal-car', day: 1, active: true, lastRun: '2026-11-01', lastAmount: 50, runs: 11, monthly: { '2026-11': 50 } },
+    { id: 'as-roundup', name: 'Round-ups to the holiday fund', kind: 'roundup', amount: 0, destKind: 'goal', destId: 'goal-holiday', day: 0, active: true, lastRun: '2026-09-30', lastAmount: 4.60, runs: 1, monthly: { '2026-09': 4.60 } },
+  ];
+}
+
+// The auto-save rules, filled in for an older save (no rules yet —
+// the page falls back to the four sample rules). A rule that lost its
+// destination, or whose numbers are not numbers, is dropped rather
+// than shown broken.
+export function autosaveStore(state) {
+  if (!Array.isArray(state.autosave)) state.autosave = sampleAutoSave();
+  state.autosave = state.autosave.filter((r) => r && typeof r.name === 'string' && (r.kind === 'fixed' || r.kind === 'roundup') && (r.destKind === 'goal' || r.destKind === 'bigbuy') && typeof r.destId === 'string');
+  for (const r of state.autosave) {
+    if (typeof r.amount !== 'number' || r.amount < 0) r.amount = 0;
+    if (!Number.isInteger(r.day) || r.day < 0 || r.day > 28) r.day = 1;
+    if (typeof r.active !== 'boolean') r.active = true;
+    if (typeof r.lastRun !== 'string') r.lastRun = '';
+    if (typeof r.lastAmount !== 'number' || r.lastAmount < 0) r.lastAmount = 0;
+    if (!Number.isInteger(r.runs) || r.runs < 0) r.runs = 0;
+    if (!r.monthly || typeof r.monthly !== 'object') r.monthly = {};
+  }
+  return state.autosave;
+}
+
+// Fill v16 fields into an older saved state so v1–v15 saves keep working.
+// v16 adds the auto-save rules (four sample rules) and the auto-pay
+// switch on every bill (off for older saves — a bill only pays itself
+// when the household switches it on). The version bump records that
+// the save has been seen by v16 code.
+export function ensureV16(state) {
+  if (!state) return sampleState();
+  ensureV15(state);
+  autosaveStore(state);
+  for (const b of (state.bills || [])) {
+    if (typeof b.autoPay !== 'boolean') b.autoPay = false;
+  }
+  state.version = 16;
+  return state;
+}
+
 // Fill v15 fields into an older saved state so v1–v14 saves keep working.
 // v15 adds the banked-allowance records behind the per-member challenges
 // on the Streaks page (empty = nothing banked yet, the page falls back
@@ -492,7 +549,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 15,
+    version: 16,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -517,6 +574,7 @@ export function sampleState() {
     subscriptions: sampleSubscriptions(),
     checkins: sampleCheckins(),
     bigbuys: sampleBigBuys(),
+    autosave: sampleAutoSave(),
     // Banked unspent allowance (v15): what each person already moved
     // into savings — Maya $145, Daniel $40, Sofia $15, Liam $10, $210
     // between them, all into the emergency fund. The emergency fund's
@@ -540,7 +598,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV15(parsed);
+    return ensureV16(parsed);
   } catch {
     return sampleState();
   }

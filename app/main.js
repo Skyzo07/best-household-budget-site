@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -54,6 +54,7 @@ async function showView(route) {
   if (route === 'checkin') (await import('./checkin.js')).renderCheckin(state, root);
   if (route === 'bigbuys') (await import('./bigbuys.js')).renderBigbuys(state, root);
   if (route === 'streaks') (await import('./streaks.js')).renderStreaks(state, root);
+  if (route === 'autosave') (await import('./autosave.js')).renderAutosave(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -538,6 +539,58 @@ app.addEventListener('click', async (e) => {
     }
     return;
   }
+  // ---- Auto-save rules (v16): run now, run all, toggle, add, delete ----
+  const asRunBtn = t.closest('[data-as-run]');
+  if (asRunBtn) {
+    const as = await import('./autosave.js');
+    const res = as.runRule(state, asRunBtn.dataset.asRun);
+    persist();
+    rerender();
+    if (res.moved > 0) window.alert('Moved ' + money(res.moved) + ' into the ' + res.dest + '. The destination page already shows it.');
+    else if (res.reason === 'today') window.alert('That rule already ran today — a rule runs once a day.');
+    else if (res.reason === 'swept') window.alert('Nothing to move — this month’s round-ups were already swept into the round-up pot, so the same cents are not saved twice.');
+    else if (res.reason === 'paused') window.alert('That rule is paused — resume it first.');
+    else if (res.reason === 'nothing') window.alert('Nothing to move yet — there are no round-ups to sweep this month, or the amount is $0.');
+    else window.alert('That rule has nowhere to move money to any more — its destination was deleted.');
+    return;
+  }
+  if (t.closest('[data-as-run-all]')) {
+    const as = await import('./autosave.js');
+    const res = as.runAllActive(state);
+    persist();
+    rerender();
+    if (res.ran.length) window.alert('Ran ' + res.ran.length + ' rule' + (res.ran.length === 1 ? '' : 's') + ' — moved ' + money(res.total) + ' in total: ' + res.ran.map((r) => r.name + ' ' + money(r.moved)).join(', ') + '.' + (res.skipped.length ? ' Skipped ' + res.skipped.length + ' (' + res.skipped.map((s2) => s2.name + ': ' + s2.why).join(', ') + ').' : ''));
+    else window.alert('Nothing ran — every active rule already ran today, is paused, or has nothing to move.');
+    return;
+  }
+  const asToggleBtn = t.closest('[data-as-toggle]');
+  if (asToggleBtn) {
+    const as = await import('./autosave.js');
+    as.toggleRule(state, asToggleBtn.dataset.asToggle);
+    persist();
+    rerender();
+    return;
+  }
+  const asDelBtn = t.closest('[data-as-del]');
+  if (asDelBtn) {
+    const as = await import('./autosave.js');
+    const r = (state.autosave || []).find((x) => x.id === asDelBtn.dataset.asDel);
+    if (r && window.confirm('Delete the rule "' + r.name + '"? What it already moved stays moved — only the future runs stop.')) {
+      as.deleteRule(state, r.id);
+      persist();
+      rerender();
+    }
+    return;
+  }
+  if (t.closest('[data-as-add]')) {
+    const as = await import('./autosave.js');
+    const added = as.addRule(state, $('#as-add-name').value, $('#as-add-kind').value, $('#as-add-amount').value, $('#as-add-dest').value, $('#as-add-day').value);
+    persist();
+    rerender();
+    if (added) window.alert('Rule added: ' + added.name + ' — ' + (added.kind === 'roundup' ? 'round-ups sweep on the last day of the month' : money(added.amount) + ' on day ' + (added.day === 0 ? 'last' : added.day) + ' of every month') + '. Press “Run now” to move the first one today.');
+    else window.alert('That rule is missing something — give it a name, pick a destination, and (for a fixed rule) an amount above $0.');
+    return;
+  }
   // ---- Bills year grid: jump the month switcher to that month (v10) ----
   const gotoMonthBtn = t.closest('[data-bill-goto-month]');
   if (gotoMonthBtn) {
@@ -888,6 +941,19 @@ app.addEventListener('click', async (e) => {
     bills.toggleBillPaid(state, billPaid.dataset.billPaid, state.currentMonth);
     persist();
     rerender();
+    return;
+  }
+  // ---- Bills auto-pay switch (v16): on = the bill pays itself on its
+  // due day; off = the household pays it by hand. ----
+  const billAutoBtn = t.closest('[data-bill-autopay]');
+  if (billAutoBtn) {
+    const on = bills.toggleBillAutoPay(state, billAutoBtn.dataset.billAutopay);
+    persist();
+    rerender();
+    if (on !== null) {
+      const b = state.bills.find((x) => x.id === billAutoBtn.dataset.billAutopay);
+      window.alert(on ? ('Auto-pay is on for ' + (b ? b.name : 'that bill') + ' — it pays itself on its due day from now on.') : ('Auto-pay is off for ' + (b ? b.name : 'that bill') + ' — pay it by hand before its due day.'));
+    }
     return;
   }
   const billEdit = t.closest('[data-bill-edit]');

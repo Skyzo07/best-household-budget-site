@@ -1,10 +1,15 @@
 // Hearth & Home Budget — bills & recurring: due-date list with paid
 // toggles, recurring rules that post real transactions, and pocket-money
 // allowances per person. All figures come from state; nothing is faked.
-import { categoryById, money, money0, monthLabel, monthTransactions, uid, todayISO } from './data.js';
+import { categoryById, money, money0, monthLabel, monthTransactions, shiftMonth, uid, todayISO } from './data.js';
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function daySuffix(day) {
@@ -48,6 +53,41 @@ export function toggleBillPaid(state, billId, key) {
   const i = bill.paidMonths.indexOf(key);
   if (i === -1) bill.paidMonths.push(key); else bill.paidMonths.splice(i, 1);
   state.sample = false;
+}
+
+// ---- Auto-pay (v16): the switch that says a bill pays itself. ----
+// A bill on auto-pay is one the household set up with the bank, so the
+// money leaves on its due day without anyone remembering it. The
+// switch only records the setup — the paid toggle still marks the
+// payment when it lands, so the records stay honest. Returns the new
+// state (true = on), or null when there is no such bill.
+export function toggleBillAutoPay(state, billId) {
+  const bill = (state.bills || []).find((b) => b.id === billId);
+  if (!bill) return null;
+  bill.autoPay = bill.autoPay !== true;
+  state.sample = false;
+  return bill.autoPay;
+}
+
+// The next date an auto-pay bill goes out: the first coming due day
+// of its month that is not already marked paid. A bill paid this
+// month shows next month; a bill whose due day already passed this
+// month and is still unpaid shows next month too — it did not go out.
+export function nextAutoPayDate(bill, key) {
+  if (!bill || bill.autoPay !== true) return null;
+  const today = todayISO();
+  const todayDay = Number(today.slice(8, 10));
+  let m = key;
+  for (let i = 0; i < 24; i++) {
+    const inCurrentMonth = m === today.slice(0, 7);
+    const dueYet = !inCurrentMonth || bill.day >= todayDay;
+    if (dueYet && !(bill.paidMonths || []).includes(m)) {
+      const lastDay = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate();
+      return m + '-' + String(Math.min(bill.day, lastDay)).padStart(2, '0');
+    }
+    m = shiftMonth(m, 1);
+  }
+  return null;
 }
 
 // ---- Recurring rules: posting one writes a real transaction. ----
@@ -181,6 +221,7 @@ export function renderBills(state, root) {
 
   const billRows = bills.map((b) => {
     const cat = categoryById(b.category);
+    const nextAuto = nextAutoPayDate(b, key);
     const status = b.paid
       ? '<span class="pill">Paid ✓</span>'
       : b.overdue
@@ -194,6 +235,9 @@ export function renderBills(state, root) {
       + '<td class="num">' + daySuffix(b.day) + ' ' + monthLabel(key).split(' ')[0] + '</td>'
       + '<td class="amount"><b>' + money(b.amount) + '</b></td>'
       + '<td>' + status + '</td>'
+      + '<td><button class="icon-btn' + (b.autoPay ? ' on' : '') + '" data-bill-autopay="' + b.id + '">' + (b.autoPay ? 'Auto-pay: on' : 'Auto-pay: off') + '</button>'
+      + (b.autoPay && nextAuto ? '<span class="muted small" style="display:block">next ' + fmtDate(nextAuto) + '</span>' : '')
+      + '</td>'
       + '<td><button class="icon-btn" data-bill-paid="' + b.id + '">' + (b.paid ? 'Undo' : 'Mark paid') + '</button> '
       + '<button class="icon-btn" data-bill-edit="' + b.id + '">Edit</button> '
       + '<button class="icon-btn" data-bill-del="' + b.id + '">Delete</button></td></tr>';
@@ -220,6 +264,11 @@ export function renderBills(state, root) {
       + '<div class="bar"><i class="' + (pct > 100 ? 'over' : pct > 85 ? 'amber' : '') + '" style="width:' + pct.toFixed(1) + '%"></i></div></div>';
   }).join('');
 
+  // ---- Auto-pay (v16): how much of the month pays itself. ----
+  const autoPayBills = bills.filter((b) => b.autoPay);
+  const autoPayCovered = Math.round(autoPayBills.reduce((a, b) => a + b.amount, 0) * 100) / 100;
+  const nextAuto = autoPayBills.map((b) => ({ b, date: nextAutoPayDate(b, key) })).filter((x) => x.date).sort((a, b) => a.date.localeCompare(b.date))[0] || null;
+
   root.innerHTML =
     '<div class="page-head"><div><h1>Bills &amp; recurring</h1><p class="muted">Every regular bill for ' + monthLabel(key) + ', with its due date — plus the rules that post themselves so nothing is forgotten.</p></div>'
     + '<div><button class="btn primary" id="btn-add-bill">+ Add bill</button> <button class="btn ghost" id="btn-add-rule">+ Add recurring rule</button></div></div>'
@@ -232,8 +281,9 @@ export function renderBills(state, root) {
     + billCalendar(state, key)
     + billYearGrid(state, key)
     + '<div class="card" style="margin-top:16px"><h2>Bills due in ' + monthLabel(key) + '</h2>'
-    + (bills.length ? '<table><thead><tr><th>Bill</th><th>Due</th><th class="amount">Amount</th><th>Status</th><th></th></tr></thead><tbody>' + billRows + '</tbody></table>'
+    + (bills.length ? '<table><thead><tr><th>Bill</th><th>Due</th><th class="amount">Amount</th><th>Status</th><th>Auto-pay</th><th></th></tr></thead><tbody>' + billRows + '</tbody></table>'
       : '<p class="empty">No bills yet — add the first one above.</p>')
+    + '<p class="muted small">Auto-pay is on for ' + autoPayBills.length + ' of ' + bills.length + ' bills — ' + money(autoPayCovered) + ' of the ' + money(totals.due) + ' due this month leaves on its own. ' + (nextAuto ? 'Next auto-pay: ' + esc(nextAuto.b.name) + ' — ' + money(nextAuto.b.amount) + ' on ' + fmtDate(nextAuto.date) + '.' : 'No auto-pay is set up — switch a bill on and its next date shows under the switch.') + ' A bill on auto-pay still needs its paid toggle pressed when the money lands, so the records stay honest.</p>'
     + '<p class="muted small">Tip: pay the big fixed bills (rent, insurance) the day payday lands, and keep the due dates spread across the month so one week never carries everything.</p></div>'
     + '<div class="grid two" style="margin-top:16px"><div class="card"><h2>Recurring rules</h2><p class="muted small">A rule posts one real transaction into the current month — once per month, never twice. Pause a rule instead of deleting it when a subscription is on hold.</p>'
     + '<ul class="tx-list">' + (ruleRows || '<li class="empty">No recurring rules yet.</li>') + '</ul>'

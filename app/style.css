@@ -315,3 +315,7 @@ tr.month-detail td { background: #f4f7f4; font-size: .92rem; }
   .legend { columns: 1; }
   th.hide-m, td.hide-m { display: none; }
 }
+
+/* v16 — auto-save rules and bill auto-pay switches. An "on" switch
+reads green so a glance down the bills table shows what pays itself. */
+.icon-btn.on { background: var(--green-soft); border-color: var(--green); color: var(--green-deep); font-weight: 700; }

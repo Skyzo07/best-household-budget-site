@@ -87,6 +87,17 @@
 // later by import() 16 files, 78,089 bytes gzip-9 (streaks.js 5,984
 // lazy); whole app 23 files, 424,592 bytes. Verified:
 // /tmp/bhb-v15-verify.mjs, 90/90 checks PASS, 0 JS errors,
+// 0 external requests. v16 adds autosave.js (lazy too): auto-save
+// rules — payday moves into a savings goal or a big purchase's pot,
+// and the last day of the month sweeps the round-ups into a goal —
+// each rule with its destination, amount, next-run date and last run,
+// a working toggle, a "run now" that moves the money for real, a
+// "run all" button and an add-rule form; plus auto-pay switches on
+// the Bills page, one per bill, with the next auto-pay date shown.
+// v16 first load: 6 files, 46,275 bytes gzip-9 (target ≤ ~54 KB);
+// later by import() 17 files, 84,830 bytes gzip-9 (autosave.js 5,888
+// lazy); whole app 24 files, 455,462 bytes. Verified:
+// /tmp/bhb-v16-verify.mjs, 110/110 checks PASS, 0 JS errors,
 // 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

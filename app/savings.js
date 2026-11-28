@@ -168,7 +168,7 @@ export function renderSavings(state, root) {
     + '<div class="grid kpis">'
     + '<div class="card kpi good"><div class="kpi-label">52-week challenge</div><div class="kpi-value num">' + money(ch.saved) + '</div><div class="kpi-sub">' + ch.weeksDone + ' of 52 weeks paid · ' + pct.toFixed(0) + '% of ' + money(ch.target) + (next ? ' · next: week ' + next + ' (' + money(weekAmount(mode, next)) + ')' : ' · all 52 weeks paid!') + '</div></div>'
     + '<div class="card kpi"><div class="kpi-label">No-spend days — ' + monthLabel(key) + '</div><div class="kpi-value num">' + noSpendDays.length + ' days</div><div class="kpi-sub">Best streak ' + streak + ' day' + (streak === 1 ? '' : 's') + ' · roughly ' + money(kept) + ' kept in the household</div></div>'
-    + '<div class="card kpi good"><div class="kpi-label">Round-up pot</div><div class="kpi-value num">' + money(pot) + '</div><div class="kpi-sub">' + (swept ? 'This month’s round-ups are already in the pot' : money(ru.total) + ' waiting to sweep from ' + monthLabel(key)) + '</div></div>'
+    + '<div class="card kpi good"><div class="kpi-label">Round-up pot</div><div class="kpi-value num">' + money(pot) + '</div><div class="kpi-sub">' + (swept ? 'This month’s round-ups are already swept' : money(ru.total) + ' waiting to sweep from ' + monthLabel(key)) + '</div></div>'
     + '<div class="card kpi"><div class="kpi-label">Saved this month</div><div class="kpi-value num">' + money(t.saved) + '</div><div class="kpi-sub">Income ' + money(t.income) + ' − spent ' + money(t.expense) + ' · challenges ride on top of it</div></div>'
     + '</div>'
 

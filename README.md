@@ -138,6 +138,29 @@ account, no server, nothing leaves your browser. Built for the make.fun
   $25,000.00 needs $4,922.24, landing January 2027 at the pace kept).
   The subscription audit's $491.34 a year is named as one more win on
   the table, with a link to the audit.
+- **Auto-save rules (v16)** — money that moves itself. Four standing
+  rules, every figure worked out from the household's own records.
+  **Payday: $100.00 to the emergency fund** on the 1st — 11 runs,
+  $1,100.00 of the fund's $4,350.00 came this way; **Payday: $80.00 to
+  the washing machine** — 3 runs, $240.00, the whole of that pot so far;
+  **Payday: $50.00 to the car deposit** — 11 runs, $550.00 of the
+  $2,150.00; **Round-ups to the holiday fund** on the last day of the
+  month — 1 run, September 30, $4.60. Between them the rules have
+  auto-saved **$1,894.60 in 2026**, $230.00 of it in November, and the
+  next run is the round-up sweep on **Nov 30, 2026 ($5.51 of round-ups
+  so far)**. Every rule shows its destination, its amount, its next-run
+  date and its last run, and every control works: **Run now** moves the
+  money for real (emergency fund $4,350.00 → $4,450.00, washing machine
+  $240.00 → $320.00, holiday $980.00 → $985.51 — and the Goals and Big
+  purchases pages agree at once), **Run all active rules now** runs all
+  four in one press ($235.51) and a second press moves nothing, **Pause**
+  stops the future runs, and the **add form** writes a new rule (fixed
+  amount on payday, or round-ups on the last day, into any goal or big
+  purchase — a $25.00 rule into the holiday runs and deletes cleanly).
+  A rule runs once a day, and a round-up rule finds nothing to move in
+  a month the round-up pot already swept — October's $4.65 went to the
+  pot instead, so the same cents are never saved twice. A per-rule
+  monthly ledger counts every run, so a month with two runs counts both.
 - **Subscription audit — usage log (v14)** — every subscription now
   shows the dates it was actually opened, not just the last one: a
   visible log ("Used 4× logged: Nov 22 · Oct 23 · Sep 23") under the
@@ -170,6 +193,16 @@ account, no server, nothing leaves your browser. Built for the make.fun
   toggle (paid / overdue / due-in-days), an upcoming-month total, and
   recurring rules that post one real transaction into the current month
   ("Post now" per rule, "Post all due" for the month) — never twice.
+  **Auto-pay switches (v16):** every bill carries its own on/off switch,
+  and a bill on auto-pay shows its next auto-pay date underneath —
+  rent, electricity, water, internet, the phones and the car insurance
+  are on it, so **$1,934.60 of the $2,249.59 due this month pays itself**,
+  next the rent $1,450.00 on Dec 1, 2026 (car insurance follows on Dec
+  22). Switch the gym on and the covered total rises to $1,979.60;
+  switch the rent off and it falls to $529.60 with the next auto-pay
+  moving to Dec 3. The switch only records the setup with the bank —
+  the paid toggle still marks the payment when it lands, so the records
+  stay honest.
   Pocket-money allowances per person, with spending counted from their own
   tagged transactions. A bill calendar lays the whole month out as a grid,
   one pressable chip per bill on its due day — press a chip to mark that
@@ -349,7 +382,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   date), both defaulted for older saves. v15 adds the banked-allowance
   records behind the per-member challenges (Maya $145.00, Daniel $40.00,
   Sofia $15.00, Liam $10.00 into the emergency fund), defaulted for
-  older saves.
+  older saves. v16 adds the auto-save rules (four sample rules) and the
+  auto-pay switch on every bill (off for older saves — a bill only pays
+  itself when the household switches it on), both defaulted for older saves.
 
 ## Tech
 
@@ -357,7 +392,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The fifteen newer sections are one-job
+  (routing, dialogs, CRUD, export). The sixteen newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -391,7 +426,11 @@ account, no server, nothing leaves your browser. Built for the make.fun
   `streaks.js` (streaks & wins — months inside the budget, the no-spend
   streak counted from Transactions, the 52-week run, one personal
   challenge per member from the banked records, milestones already
-  reached and the next in line; mark-today and pay-next-week controls).
+  reached and the next in line; mark-today and pay-next-week controls),
+  `autosave.js` (auto-save rules — payday moves into a goal or a big
+  purchase's pot, month-end round-up sweeps into a goal, next-run dates
+  worked out from today, a per-rule monthly ledger, run-now / run-all /
+  pause / add / delete, all moving real money).
   `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
@@ -420,9 +459,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-streaks.png` — Streaks & wins: 11 months inside the budget in a row, an 8-day no-spend streak, 20 weeks of the 52-week challenge paid, $210.00 banked across the household's challenges, and the milestones already reached (desktop, 1280×800)
-- `screenshots/3-goals.png` — Savings goals with the new milestone chips: emergency fund 25% and 50% reached, 75% next at $4,500.00, holiday 25% reached, car deposit 25% reached (desktop, 1280×800)
-- `screenshots/4-budgets-phone.png` — Monthly budgets on a phone (390×844): budget vs actual bars and the six-month sparklines in the phone layout
+- `screenshots/2-autosave.png` — Auto-save rules: $1,894.60 auto-saved in 2026, $230.00 moved in November, 4 of 4 rules active, next run Nov 30, 2026 (round-ups $5.51), and the first rule card — payday $100.00 to the emergency fund, next run Dec 1, 2026, $1,100.00 over 11 runs (desktop, 1280×800)
+- `screenshots/3-forecast.png` — Forecast for December 2026: Trend / 6-month average / Budget plan switcher, projected income $5,766.67, projected spending $3,109.67, projected month-end $2,657.00, $31,884.00 saved across 2027 at this pace (desktop, 1280×800)
+- `screenshots/4-autosave-phone.png` — Auto-save rules on a phone (390×844): the nav, the month switcher and the rules in the phone layout
 
 ## License
 
