@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -59,6 +59,7 @@ async function showView(route) {
   if (route === 'nextmonth') (await import('./nextmonth.js')).renderNextmonth(state, root);
   if (route === 'rules') (await import('./rules.js')).renderRules(state, root);
   if (route === 'stores') (await import('./stores.js')).renderStores(state, root);
+  if (route === 'debtfree') (await import('./debtfree.js')).renderDebtfree(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -87,6 +88,14 @@ async function renderRulesLive() {
 async function renderStoresLive() {
   if (currentRoute() !== 'stores') return;
   (await import('./stores.js')).renderStores(state, $('#view-stores'));
+}
+
+// Re-render just the Debt-free calendar view (used after changing the
+// extra payment, the payoff order, the one-off extra, or opening a
+// month's per-debt split).
+async function renderDebtfreeLive() {
+  if (currentRoute() !== 'debtfree') return;
+  (await import('./debtfree.js')).renderDebtfree(state, $('#view-debtfree'));
 }
 
 // Re-render just the Reports view (used while typing in the payoff planner).
@@ -683,6 +692,39 @@ app.addEventListener('click', async (e) => {
     renderStoresLive();
     return;
   }
+  // ---- Debt-free calendar (v21): open a month's per-debt split,
+  // book a one-off extra payment in the first month, clear it. ----
+  const dfMonthBtn = t.closest('[data-df-month]');
+  if (dfMonthBtn) {
+    const df = await import('./debtfree.js');
+    df.toggleDebtfreeMonth(dfMonthBtn.dataset.dfMonth);
+    renderDebtfreeLive();
+    return;
+  }
+  if (t.closest('[data-df-oneoff-apply]')) {
+    const df = await import('./debtfree.js');
+    const amount = Number(($('#df-oneoff-amount') || {}).value);
+    if (!Number.isFinite(amount) || amount <= 0) { window.alert('Give the extra payment an amount above $0 first.'); return; }
+    const before = df.buildSchedule(state.debts, Number(state.payoffExtra) || 0, 0, state.payoffMethod, state.currentMonth);
+    const store = df.debtfreeStore(state);
+    store.oneOff = Math.round(amount * 100) / 100;
+    state.sample = false;
+    persist();
+    renderDebtfreeLive();
+    const after = df.buildSchedule(state.debts, Number(state.payoffExtra) || 0, store.oneOff, state.payoffMethod, state.currentMonth);
+    const monthsSaved = Math.max(0, before.months - after.months);
+    const interestSaved = Math.max(0, Math.round((before.interest - after.interest) * 100) / 100);
+    window.alert('Booked: ' + money(store.oneOff) + ' extra in ' + monthLabel(after.rows[0] ? after.rows[0].key : state.currentMonth) + ' — the plan now ends ' + (monthsSaved ? monthsSaved + ' month' + (monthsSaved === 1 ? '' : 's') + ' sooner' : 'on the same date') + ' and saves ' + money(interestSaved) + ' of interest (' + after.months + ' months, ' + money(after.interest) + ' in total).');
+    return;
+  }
+  if (t.closest('[data-df-oneoff-clear]')) {
+    const df = await import('./debtfree.js');
+    df.debtfreeStore(state).oneOff = 0;
+    state.sample = false;
+    persist();
+    renderDebtfreeLive();
+    return;
+  }
   // ---- Bills: pay all due (v20) — one press, one confirm, every
   // bill still unpaid for the month is marked paid. ----
   if (t.id === 'btn-pay-all-bills') {
@@ -1259,6 +1301,20 @@ app.addEventListener('input', (e) => {
       const pos = t.selectionStart;
       renderReportsLive();
       const el = document.querySelector('[data-extra]');
+      if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+    }
+  }
+  // Debt-free calendar's own extra box: same figure as the Reports
+  // planner, but the calendar re-renders instead of the Reports page.
+  if (t.dataset && t.dataset.dfExtra !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      state.payoffExtra = v;
+      state.sample = false;
+      persist();
+      const pos = t.selectionStart;
+      renderDebtfreeLive();
+      const el = document.querySelector('[data-df-extra]');
       if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
     }
   }

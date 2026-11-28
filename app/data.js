@@ -604,6 +604,15 @@ export function houseRulesStore(state) {
 // v20 adds the household's usual grocery shop (SuperMart until the
 // household picks another one on the Where we shop page). The version
 // bump records that the save has been seen by v20 code.
+export function ensureV21(state) {
+  if (!state) return sampleState();
+  ensureV20(state);
+  if (!state.debtfree || typeof state.debtfree !== 'object') state.debtfree = { oneOff: 0 };
+  if (typeof state.debtfree.oneOff !== 'number' || state.debtfree.oneOff < 0) state.debtfree.oneOff = 0;
+  state.version = 21;
+  return state;
+}
+
 export function ensureV20(state) {
   if (!state) return sampleState();
   ensureV19(state);
@@ -702,7 +711,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 20,
+    version: 21,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -722,6 +731,7 @@ export function sampleState() {
     debts: sampleDebts(),
     payoffExtra: 50,
     payoffMethod: 'avalanche',
+    debtfree: { oneOff: 0 },
     grocery: { offset: 0, list: sampleGroceryList(), pantry: samplePantry(), overrides: {} },
     challenges: sampleChallenges(),
     subscriptions: sampleSubscriptions(),
@@ -766,7 +776,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV20(parsed);
+    return ensureV21(parsed);
   } catch {
     return sampleState();
   }

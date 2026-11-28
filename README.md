@@ -218,6 +218,35 @@ account, no server, nothing leaves your browser. Built for the make.fun
   for a transaction comes from its own words — the note on the weekly
   shop, the description otherwise — so edit a description on the
   Transactions page and the shop moves.
+- **Debt-free calendar (v21)** — the household's own debts laid out
+  month by month, from the next payment to the last, every figure
+  computed live — nothing typed in. **$10,100.00 owed** across three
+  debts (credit card $1,250.00 at 19.9%, store card $450.00 at 12.9%,
+  car loan $8,400.00 at 6.4%), minimums $270.00 a month plus the
+  $50.00 extra. **Avalanche** (highest APR first: credit card →
+  store card → car loan) clears everything in **40 months for
+  $1,238.76 of interest, debt-free March 2030**; **snowball**
+  (smallest balance first) takes 41 months and $1,316.02, debt-free
+  April 2030 — and with no extra at all it is 55 months and
+  $1,785.27, June 2031, so the $50.00 a month **saves $546.51 and
+  finishes 15 months sooner**. The calendar runs December 2026 to
+  March 2030, one row a month — paid, interest, principal, balance
+  left — and **press any month to see that payment split per debt**
+  (December 2026: $390.37 paid, $70.37 interest, $320.00 principal —
+  $85.00 off the credit card, $25.00 off the store card, $210.00 off
+  the car loan). Each debt gets its own card with the month it
+  clears (credit card April 2028, store card June 2028, car loan
+  March 2030) and the interest it costs under the plan. **Pay extra
+  this month** books one extra payment in December 2026 only — $500
+  there pulls the plan to **39 months and $1,078.38 of interest,
+  saving $160.38** — and the whole calendar, the debt-free date and
+  the saving move at once; Clear takes it back off. Raise the monthly
+  extra to $100 and the plan falls to **34 months, $1,031.51,
+  September 2029**. Switch the order to snowball and the calendar
+  rebuilds around the store card clearing first, in 7 months. The
+  extra payment and the method are the **same figures the Reports
+  payoff planner edits**, so the two pages can never disagree — and
+  the Reports page still shows the same 40 months and $1,238.76.
 - **Monthly money meeting (v17)** — once a month, around the table. The
   page builds the agenda itself from the household's own records: six
   wins (11 of 11 months inside the $3,800.00 plan, net worth positive
@@ -459,7 +488,15 @@ account, no server, nothing leaves your browser. Built for the make.fun
   biggest categories of the year, and a plan for next year (including the
   three-months-of-spending emergency-fund target). Press any month in the
   table to open its drill-down — top categories and biggest single spends
-  for that month.
+  for that month. **2027 projection (v21):** the Forecast page's
+  December 2026 projection held flat for twelve months — income
+  **$69,200.04**, spending **$37,316.04**, saving **$31,884.00**
+  (46.1% savings rate), $86.43 a month less than the $2,743.43 actually
+  saved a month in 2026 — with the biggest riser called out (Kids &
+  school, December projected at $225.27 against a $131.92 six-month
+  average). Change the forecast method or the extra saving on the
+  Forecast page and the projection moves with it. The month table
+  scrolls inside its card on a phone instead of stretching the page.
 - **Insights** — six-month income-vs-spending trend chart, biggest spending
   categories, a six-month savings-rate chart against the 20% rule of
   thumb, month-over-month comparison and plain-language tips written
@@ -522,7 +559,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   spending caps, no-spend days, takeaway limit, save rate, unused
   subscriptions), defaulted for older saves. v20 adds the household's
   usual grocery shop (SuperMart until the household picks another one
-  on the Where we shop page), defaulted for older saves.
+  on the Where we shop page), defaulted for older saves. v21 adds the
+  debt-free calendar's one-off extra payment ($0 until the household
+  books one on the Debt-free calendar page), defaulted for older saves.
 
 ## Tech
 
@@ -530,7 +569,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The twenty newer sections are one-job
+  (routing, dialogs, CRUD, export). The twenty-two newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -586,7 +625,13 @@ account, no server, nothing leaves your browser. Built for the make.fun
   last-month comparison and category split, show-the-purchases detail,
   sort by spend / trips / A–Z, the usual-grocery-shop picker, and the
   grocery switch estimate measured against it from the staple price
-  history).
+  history), `debtfree.js` (debt-free calendar — the household's own
+  debts as a month-by-month payoff schedule from the next payment to
+  the last, avalanche or snowball, with a monthly extra payment, a
+  one-off extra payment in the first month, per-debt clear months and
+  an expandable per-debt split of every payment, all recomputed live
+  from the same extra payment and method the Reports payoff planner
+  keeps).
   `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
@@ -618,9 +663,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-stores.png` — Where we shop: November's $3,058.49 across 17 shops and payees, SuperMart biggest shop at $476.60, the $7.89-a-month switch estimate against SuperMart (desktop, 1280×800)
-- `screenshots/3-bills.png` — Bills & recurring: the bill calendar, the year-at-a-glance grid, and Pay all due — $163.00 for the car and home insurance still unpaid in November (desktop, 1280×800)
-- `screenshots/4-transactions-phone.png` — Transactions on a phone (390×844), filters and the month's spending, no horizontal overflow
+- `screenshots/2-debtfree.png` — Debt-free calendar: $10,100.00 owed, debt-free March 2030 in 40 months for $1,238.76 of interest, the $546.51 the extra buys, avalanche/snowball switch, extra-a-month box and Pay extra this month (desktop, 1280×800)
+- `screenshots/3-stores.png` — Where we shop: November's $3,058.49 across 17 shops and payees, SuperMart biggest shop at $476.60, the $7.89-a-month switch estimate against SuperMart (desktop, 1280×800)
+- `screenshots/4-annual-phone.png` — Annual overview on a phone (390×844), scrolled to the 2027 projection card — $69,200.04 income, $37,316.04 spending, $31,884.00 saving at 46.1% — no horizontal overflow
 
 ## License
 

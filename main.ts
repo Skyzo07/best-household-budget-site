@@ -158,6 +158,28 @@
 // Verified: /tmp/bhb-v20-verify.mjs, 78/78 checks PASS, 0 JS errors,
 // 0 external requests; phone scrollWidth 390 on Stores, Bills and
 // Transactions after the table-scroll and calendar shrink fixes.
+// v21 adds debtfree.js (lazy too): a debt-free calendar — the
+// household's own debts as a month-by-month payoff schedule from
+// December 2026 to the last payment, avalanche by default (credit
+// card → store card → car loan: 40 months, $1,238.76 of interest,
+// debt-free March 2030) with snowball on request (41 months,
+// $1,316.02, April 2030), every row expandable to the per-debt
+// split of that month's payment, per-debt clear months, a monthly
+// extra box and a "pay extra this month" one-off that recomputes
+// the whole calendar live ($500 in December 2026: 39 months,
+// $1,078.38, $160.38 saved) — the extra payment and the method are
+// the same figures the Reports payoff planner keeps, so the two
+// pages agree; plus a 2027 projection card on the Annual page built
+// from the Forecast page's December projection held flat for twelve
+// months ($69,200.04 income, $37,316.04 spending, $31,884.00 saving,
+// 46.1%), and a table-scroll wrap for the Annual month table after
+// the v21 phone check found it stretching 11px past 390px.
+// First load 6 files, 52,544 bytes gzip-9 (v20: 51,875, +669, target
+// ≤ ~64 KB); later by import() 22 files, 118,516 bytes gzip-9
+// (debtfree.js 5,063 lazy); whole app 29 files, 595,818 bytes.
+// Verified: /tmp/bhb-v21-verify.mjs, 76/76 checks PASS, 0 JS errors,
+// 0 external requests; phone scrollWidth 390 on Debt-free, Annual,
+// Stores, Bills and Transactions.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
