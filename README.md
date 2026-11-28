@@ -68,6 +68,27 @@ account, no server, nothing leaves your browser. Built for the make.fun
   leaves out, honestly: the trend is a straight line through six months,
   the debts are held at their current balance, and the goal date counts
   only the extra saving.
+- **Weekly check-in (v13)** — five minutes, once a week, with the
+  household's own figures. The month is split into weeks (1–7, 8–14,
+  15–21, 22–28, 29–end) and each flexible category is measured against
+  its weekly share of the monthly budget — the budget divided by 4.33,
+  the average weeks in a month — so a $620 grocery budget is $143.19
+  a week and a $240 dining budget is $55.43. Week 2 of November is the
+  week that shows it best: flexible spending $768.54 against a $482.68
+  weekly share — over by $285.86, with groceries $290.30 against
+  $143.19, school costs $185.00 against $64.67, shopping $89.99 against
+  $34.64 and dining $90.75 against $55.43. Rent and utilities are shown separately and never
+  judged against a weekly share, because they land once a month — the
+  page says so in plain words instead of calling week 1 "over" every
+  month. Then **one job for next week**, picked from a short list the
+  flagged categories suggest ("One big shop, no top-ups" when groceries
+  go over, "Cook at home 5 nights" when dining does), plus an optional
+  one-line note — saved in this browser, and the **check-in history**
+  below keeps every week you have checked in, each row with its own
+  figures recomputed live from Transactions. Week 1 is already there
+  as the sample: checked in 8 November, "Cook at home 5 nights" —
+  and it was kept, dining $46.80 against a $55.43 share. Re-saving a
+  week updates it, never doubles it; Remove takes it out of the history.
 - **Net worth** — what the household owns minus what it owes, worked out
   live from its own records and nothing else: the cash it kept, month by
   month (income minus spending, January to November: **$30,177.76**),
@@ -217,6 +238,13 @@ account, no server, nothing leaves your browser. Built for the make.fun
   categories, a six-month savings-rate chart against the 20% rule of
   thumb, month-over-month comparison and plain-language tips written
   from your own figures (savings rate, biggest jump, grocery average).
+  **Drill into a category (v13):** press any category button and the
+  page opens it up close — six months of bars (groceries ran $598.00
+  in June, $690.05 in October, $619.35 in November against a $620
+  budget) and this month's five biggest spends in it, biggest first
+  (the weekly shops: $186.30, $168.90, $142.75, $121.40), with this
+  month against its six-month average and its budget in one line.
+  Close puts the drill card away again.
 - **Reports** — a printable monthly summary (income, spending vs budget,
   bills paid, goals) and a debt-payoff planner: edit any balance, APR or
   minimum, set an extra monthly payment, and see the debt-free date, total
@@ -250,7 +278,8 @@ account, no server, nothing leaves your browser. Built for the make.fun
   defaulted to this year's own pace for older saves. v11 adds the
   net-worth target, defaulted to the next $5,000 milestone. v12 adds the
   what-if planner settings and one personal savings challenge per member,
-  both defaulted for older saves.
+  both defaulted for older saves. v13 adds the weekly check-in history
+  (one sample check-in from week 1 of November), defaulted for older saves.
 
 ## Tech
 
@@ -258,7 +287,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The twelve newer sections are one-job
+  (routing, dialogs, CRUD, export). The thirteen newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -281,7 +310,10 @@ account, no server, nothing leaves your browser. Built for the make.fun
   (what-if planner — trim a category, save extra into a chosen goal, pay
   extra off the debts; live side-by-side against the current plan with
   presets, Apply that writes into the budgets / payoff planner / forecast,
-  and Undo). `favicon.ico` is a hand-drawn
+  and Undo), `checkin.js` (weekly check-in — this week's flexible
+  spending against its weekly share of each monthly budget, fixed costs
+  shown but not judged, one action for next week from the flagged
+  categories, saved check-in history). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -309,9 +341,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-whatif.png` — What-if planner: month-end $2,707.00, net-worth pace $2,843.43 a month, debt-free September 2029, and the trim table (desktop, 1280×800)
-- `screenshots/3-members-phone.png` — Household members on a phone (390×844): allowances, biggest spender, and each person's savings challenge
-- `screenshots/4-networth.png` — Net worth: $20,077.76, what the household owns split by where it sits, what it owes, and the month it turned positive (desktop, 1280×800)
+- `screenshots/2-checkin.png` — Weekly check-in, week 2 of November: flexible spending $768.54 vs a $482.68 weekly share, groceries / kids / shopping / dining over, and the one job for next week (desktop, 1280×800)
+- `screenshots/3-whatif.png` — What-if planner: month-end $2,707.00, net-worth pace $2,843.43 a month, debt-free September 2029, and the trim table (desktop, 1280×800)
+- `screenshots/4-savings-phone.png` — Savings challenges on a phone (390×844): 52-week challenge, no-spend days and the round-up pot
 
 ## License
 

@@ -402,11 +402,42 @@ export function sampleSubscriptions() {
   ];
 }
 
+// One sample check-in (v13): week 1 of November, checked in on
+// 8 November with the action "Cook at home 5 nights". The figures
+// behind it are live — dining that week was $46.80 against a $55.43
+// weekly share, so the note's "$8.63 under" is the household's own
+// arithmetic, not a made-up line.
+export function sampleCheckins() {
+  return [{ weekKey: '2026-11-w1', action: 'cook-home', note: 'Kept it — dining came in $8.63 under its weekly share all week.', savedOn: '2026-11-08' }];
+}
+
+// The saved check-ins, filled in for an older save. Each record is a
+// week key, the action picked for the next week, and an optional
+// one-line note — the figures themselves are recomputed live from
+// Transactions, so a check-in can never disagree with the records.
+export function checkinStore(state) {
+  if (!Array.isArray(state.checkins)) state.checkins = sampleCheckins();
+  state.checkins = state.checkins.filter((c) => c && typeof c.weekKey === 'string' && typeof c.action === 'string');
+  return state.checkins;
+}
+
+// Fill v13 fields into an older saved state so v1–v12 saves keep working.
+// v13 adds the weekly check-in history (0 = not checked in yet, the
+// page falls back to the one sample check-in). The version bump records
+// that the save has been seen by v13 code.
+export function ensureV13(state) {
+  if (!state) return sampleState();
+  ensureV12(state);
+  checkinStore(state);
+  state.version = 13;
+  return state;
+}
+
 export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 12,
+    version: 13,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -429,6 +460,7 @@ export function sampleState() {
     grocery: { offset: 0, list: sampleGroceryList(), pantry: samplePantry(), overrides: {} },
     challenges: sampleChallenges(),
     subscriptions: sampleSubscriptions(),
+    checkins: sampleCheckins(),
     banked: {},
   };
 }
@@ -439,7 +471,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV12(parsed);
+    return ensureV13(parsed);
   } catch {
     return sampleState();
   }

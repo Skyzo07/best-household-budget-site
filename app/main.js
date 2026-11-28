@@ -1,7 +1,7 @@
 // Hearth & Home Budget — app shell: routing, dialogs, add/edit/delete,
 // CSV export and reset. State lives in data.js and persists to localStorage.
 import { loadState, saveState, sampleState, CATEGORIES, categoryById, money, monthLabel, todayISO, uid, monthTransactions, memberChallengeStore } from './data.js';
-import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights } from './views.js';
+import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights, setInsightCat } from './views.js';
 
 let state = loadState();
 let txFilter = { q: '', cat: 'all', kind: 'all', who: 'all' };
@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -51,6 +51,7 @@ async function showView(route) {
   if (route === 'review') (await import('./review.js')).renderReview(state, root);
   if (route === 'networth') (await import('./networth.js')).renderNetworth(state, root);
   if (route === 'whatif') (await import('./whatif.js')).renderWhatif(state, root);
+  if (route === 'checkin') (await import('./checkin.js')).renderCheckin(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -453,6 +454,48 @@ app.addEventListener('click', async (e) => {
       rerender();
       window.alert('Undone — budgets, payoff extra and forecast extra are back where they were.');
     }
+    return;
+  }
+  // ---- Weekly check-in (v13): week buttons, save, remove ----
+  const ciWeekBtn = t.closest('[data-checkin-week]');
+  if (ciWeekBtn) {
+    const ci = await import('./checkin.js');
+    ci.setCheckinWeek(ciWeekBtn.dataset.checkinWeek);
+    rerender();
+    return;
+  }
+  if (t.closest('[data-checkin-save]')) {
+    const ci = await import('./checkin.js');
+    const picked = document.querySelector('input[name="checkin-action"]:checked');
+    if (!picked) { window.alert('Pick one action for next week first — the list is the one tied to this week’s over categories.'); return; }
+    const noteEl = document.querySelector('#checkin-note');
+    if (ci.saveCheckin(state, ci.currentCheckinWeek(state), picked.value, noteEl ? noteEl.value : '')) {
+      persist();
+      rerender();
+      window.alert('Check-in saved — see it in the history below. The action is your job for next week.');
+    }
+    return;
+  }
+  const ciDelBtn = t.closest('[data-checkin-del]');
+  if (ciDelBtn) {
+    const ci = await import('./checkin.js');
+    if (window.confirm('Remove this check-in from the history?')) {
+      ci.deleteCheckin(state, ciDelBtn.dataset.checkinDel);
+      persist();
+      rerender();
+    }
+    return;
+  }
+  // ---- Insights category drill-down (v13) ----
+  const insightBtn = t.closest('[data-insight-cat]');
+  if (insightBtn) {
+    setInsightCat(insightBtn.dataset.insightCat);
+    rerender();
+    return;
+  }
+  if (t.closest('[data-insight-close]')) {
+    setInsightCat('');
+    rerender();
     return;
   }
   // ---- Bills year grid: jump the month switcher to that month (v10) ----

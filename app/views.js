@@ -7,6 +7,14 @@ function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// The category the Insights page is drilled into (v13). Empty means
+// no drill-down is open. Set from main.js when a category button is
+// pressed; the page re-renders with the drill card underneath.
+let insightCat = '';
+export function setInsightCat(id) {
+  insightCat = (id && CATEGORIES.some((c) => c.id === id)) ? id : '';
+}
+
 function fmtDate(iso) {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -341,6 +349,24 @@ export function renderInsights(state, root) {
   tips.push({ cls: '', text: '<strong>Groceries average ' + money(groceryAvg) + ' a month</strong> over the last five months. A weekly meal plan and one big shop instead of daily top-ups typically cuts this by 8–12%.' });
   tips.push({ cls: 'good', text: '<strong>Housing is ' + (cur.income ? Math.round((spend.housing || 0) / cur.income * 100) : 0) + '% of income.</strong> Under 30% leaves room for savings — this household is inside the healthy range.' });
 
+  // ---- Category drill-down (v13): pick a category and see it up
+  // close — six months of bars and this month's five biggest spends.
+  const drillButtons = CATEGORIES.filter((c) => c.budget > 0).map((c) => '<button type="button" class="btn small' + (insightCat === c.id ? '' : ' ghost') + '" data-insight-cat="' + c.id + '">' + esc(c.label) + ' — ' + money(spend[c.id] || 0) + '</button>').join(' ');
+  let drillCard = '';
+  if (insightCat) {
+    const dc = categoryById(insightCat);
+    const dcSpend = spend[insightCat] || 0;
+    const dcVals = keys.map((k) => categorySpend(state, k)[insightCat] || 0);
+    const dcAvg = dcVals.reduce((a, b) => a + b, 0) / 6;
+    const dcTop = monthTransactions(state, key).filter((t) => t.kind === 'expense' && t.category === insightCat).sort((a, b) => b.amount - a.amount).slice(0, 5);
+    drillCard = '<div class="card" style="margin-top:16px"><h2>' + esc(dc.label) + ', up close <button type="button" class="btn small ghost" data-insight-close="1">Close</button></h2>'
+      + '<p style="margin-top:0">This month <b>' + money(dcSpend) + '</b> · six-month average <b>' + money(dcAvg) + '</b> · monthly budget <b>' + money(state.budgets[insightCat] || 0) + '</b> — ' + (dcSpend > dcAvg ? 'above its usual pace' : dcSpend < dcAvg ? 'below its usual pace' : 'right on its usual pace') + '.</p>'
+      + '<div class="chart-wrap"><canvas id="chart-insight-drill" class="chart" height="200" aria-label="Six months of spending in this category"></canvas></div>'
+      + '<h3 style="margin-top:12px">Biggest ' + esc(dc.label.toLowerCase()) + ' spends this month</h3>'
+      + (dcTop.length ? '<ul class="tx-list">' + dcTop.map((t) => '<li><span class="tx-main"><b>' + esc(t.description) + '</b><span>' + fmtDate(t.date) + (t.note ? ' · ' + esc(t.note) : '') + '</span></span><span class="tx-amt out">−' + money(t.amount) + '</span></li>').join('') + '</ul>' : '<p class="empty">Nothing spent on ' + esc(dc.label.toLowerCase()) + ' this month yet.</p>')
+      + '</div>';
+  }
+
   root.innerHTML =
     '<div class="page-head"><div><h1>Insights</h1><p class="muted">Six months of your household’s money, compared. Spotting the pattern is half the saving. For the printable summary and the debt plan, see <a href="#/reports">Reports</a>.</p></div>'
     + '<div><button class="btn ghost" id="btn-export">Export CSV</button></div></div>'
@@ -352,10 +378,16 @@ export function renderInsights(state, root) {
     + '<div class="card"><h2>What to do next</h2>' + tips.map((t) => '<div class="tip ' + t.cls + '">' + t.text + '</div>').join('')
     + '<p class="muted small">Month over month: income ' + (prev.income ? ((cur.income - prev.income) / prev.income * 100).toFixed(1) : '0') + '% · spending ' + (prev.expense ? ((cur.expense - prev.expense) / prev.expense * 100).toFixed(1) : '0') + '% vs ' + monthLabel(shiftMonth(key, -1)) + '.</p></div></div>'
     + '<div class="card" style="margin-top:16px"><h2>Savings rate — last 6 months</h2><div class="chart-wrap"><canvas id="chart-saverate" class="chart" height="200"></canvas></div>'
-    + '<p class="muted small">Share of income saved each month. Green is at or above the 20% rule of thumb; gold is below it. Months above 20% are the ones building the emergency fund.</p></div>';
+    + '<p class="muted small">Share of income saved each month. Green is at or above the 20% rule of thumb; gold is below it. Months above 20% are the ones building the emergency fund.</p></div>'
+    + '<div class="card" style="margin-top:16px"><h2>Drill into a category</h2><p class="muted small" style="margin-top:0">Pick a category and see it up close — six months of bars and this month’s five biggest spends in it. The buttons show what each category cost this month.</p><p>' + drillButtons + '</p></div>'
+    + drillCard;
   drawTrend(root.querySelector('#chart-trend'), points);
   const topCanvas = root.querySelector('#chart-top');
   if (topCanvas) drawBars(topCanvas, top.map(([id, v]) => ({ label: categoryById(id).label.split(' ')[0], value: v, color: categoryById(id).color })), { valueLabel: (v) => money0(v) });
   const rateCanvas = root.querySelector('#chart-saverate');
   if (rateCanvas) drawBars(rateCanvas, points.map((p) => ({ label: p.label, value: p.income ? Math.max(0, (p.income - p.expense) / p.income * 100) : 0, color: (p.income && (p.income - p.expense) / p.income >= 0.2) ? '#1d6b4f' : '#d9a441' })), { valueLabel: (v) => v.toFixed(0) + '%' });
+  const drillCanvas = root.querySelector('#chart-insight-drill');
+  if (drillCanvas && insightCat) {
+    drawBars(drillCanvas, keys.map((k) => ({ label: monthLabel(k).split(' ')[0].slice(0, 3), value: categorySpend(state, k)[insightCat] || 0, color: categoryById(insightCat).color })), { valueLabel: (v) => money0(v) });
+  }
 }

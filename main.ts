@@ -30,6 +30,9 @@
 // subscriptions.js, forecast.js and review.js are fetched only when their nav link
 // is opened, so they do not count in the first load. Deterministic:
 // the same input files always produce the same output bytes.
+// v13 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
+// members.js, savings.js, envelopes.js, subscriptions.js, forecast.js,
+// review.js, networth.js, whatif.js and checkin.js.
 // v10 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
 // members.js, savings.js, envelopes.js, subscriptions.js, forecast.js
 // and review.js. v11 adds networth.js (lazy too): what the household
@@ -48,7 +51,18 @@
 // v12 first load: 6 files, 39,886 bytes gzip-9 (target ≤ ~46 KB);
 // later by import() 13 files, 60,033 bytes gzip-9; whole app 20 files,
 // 351,034 bytes. Verified: /tmp/bhb-v12-verify.mjs, 66/66 checks PASS,
-// 0 JS errors, 0 external requests.
+// 0 JS errors, 0 external requests. v13 adds checkin.js (lazy too):
+// a weekly check-in — this week's flexible spending against its weekly
+// share of each monthly budget, fixed costs shown but not judged,
+// one action for next week picked from the flagged categories, and a
+// saved history of past check-ins; plus an Insights category
+// drill-down (six months of bars + this month's five biggest spends,
+// opened from a button per category, in the first-load views.js).
+// v13 first load: 6 files, 41,467 bytes gzip-9 (target ≤ ~48 KB);
+// later by import() 14 files, 66,169 bytes gzip-9 (checkin.js 6,136
+// lazy); whole app 21 files, 375,708 bytes. Verified:
+// /tmp/bhb-v13-verify.mjs, 85/85 checks PASS, 0 JS errors,
+// 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
