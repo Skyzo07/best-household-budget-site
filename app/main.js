@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -47,6 +47,7 @@ async function showView(route) {
   if (route === 'envelopes') (await import('./envelopes.js')).renderEnvelopes(state, root);
   if (route === 'subscriptions') (await import('./subscriptions.js')).renderSubscriptions(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
+  if (route === 'forecast') (await import('./forecast.js')).renderForecast(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -56,6 +57,12 @@ function rerender() { showView(currentRoute()); }
 async function renderReportsLive() {
   if (currentRoute() !== 'reports') return;
   (await import('./reports.js')).renderReports(state, $('#view-reports'));
+}
+
+// Re-render just the Forecast view (used while typing the extra saving).
+async function renderForecastLive() {
+  if (currentRoute() !== 'forecast') return;
+  (await import('./forecast.js')).renderForecast(state, $('#view-forecast'));
 }
 
 function persist() { saveState(state); }
@@ -333,6 +340,19 @@ app.addEventListener('click', async (e) => {
     }
     return;
   }
+  // ---- Forecast method switch (trend / 6-month average / budget plan) ----
+  const fcMethodBtn = t.closest('[data-fc-method]');
+  if (fcMethodBtn) {
+    const m = fcMethodBtn.dataset.fcMethod;
+    if (m === 'trend' || m === 'average' || m === 'budget') {
+      if (!state.forecast || typeof state.forecast !== 'object') state.forecast = { method: 'trend', extra: 0 };
+      state.forecast.method = m;
+      state.sample = false;
+      persist();
+      rerender();
+    }
+    return;
+  }
   if (t.id === 'btn-print') { window.print(); return; }
   if (t.id === 'btn-post-due') {
     const bills = await import('./bills.js');
@@ -399,6 +419,34 @@ app.addEventListener('click', async (e) => {
     if (!state.grocery) state.grocery = { offset: 0, list: [], pantry: [], overrides: {} };
     state.grocery.offset = (state.grocery.offset || 0) + Number(weekBtn.dataset.week);
     state.sample = false;
+    persist();
+    rerender();
+    return;
+  }
+  // ---- Auto-plan next week from the pantry (v9) ----
+  const autoPlanBtn = t.closest('[data-auto-plan]');
+  if (autoPlanBtn) {
+    const grocery = await import('./grocery.js');
+    const plan = grocery.autoPlanNextWeek(state);
+    const planCost = plan.dishes.reduce((a, d) => a + d.cost, 0);
+    persist();
+    rerender();
+    window.alert('Next week is planned from the pantry — 7 dinners, ' + money(planCost) + ' for the week. Flip to next week to see them, or add the missing ingredients below.');
+    return;
+  }
+  const autoIngBtn = t.closest('[data-auto-ingredients]');
+  if (autoIngBtn) {
+    const grocery = await import('./grocery.js');
+    const added = grocery.autoPlanIngredients(state);
+    persist();
+    rerender();
+    if (added.length) window.alert('Added to the list: ' + added.map((i) => i.name).join(', ') + '.');
+    else window.alert('Every ingredient is already on the list — nothing to add.');
+    return;
+  }
+  if (t.closest('[data-auto-clear]')) {
+    const grocery = await import('./grocery.js');
+    grocery.clearAutoPlan(state);
     persist();
     rerender();
     return;
@@ -758,6 +806,19 @@ app.addEventListener('input', (e) => {
       const pos = t.selectionStart;
       renderReportsLive();
       const el = document.querySelector('[data-extra]');
+      if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+    }
+  }
+  if (t.dataset && t.dataset.fcExtra !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      if (!state.forecast || typeof state.forecast !== 'object') state.forecast = { method: 'trend', extra: 0 };
+      state.forecast.extra = v;
+      state.sample = false;
+      persist();
+      const pos = t.selectionStart;
+      renderForecastLive();
+      const el = document.querySelector('[data-fc-extra]');
       if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
     }
   }

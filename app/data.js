@@ -370,9 +370,10 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 8,
+    version: 9,
     sample: true,
     currentMonth: '2026-11',
+    forecast: { method: 'trend', extra: 0 },
     budgets,
     goals: [
       { id: 'goal-emergency', name: 'Emergency fund', target: 6000, saved: 4350, date: '2027-06-30' },
@@ -399,7 +400,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV8(parsed);
+    return ensureV9(parsed);
   } catch {
     return sampleState();
   }
@@ -605,6 +606,16 @@ export function subTotals(state, key) {
     totalSaving: round(cancelSaving + downgradeSaving),
     cancelledYearly: round(cancelled.reduce((a, s) => a + subYearly(s), 0)),
   };
+}
+
+export function ensureV9(state) {
+  if (!state) return sampleState();
+  ensureV8(state);
+  if (!state.forecast || typeof state.forecast !== 'object') state.forecast = { method: 'trend', extra: 0 };
+  if (state.forecast.method !== 'average' && state.forecast.method !== 'budget') state.forecast.method = 'trend';
+  if (typeof state.forecast.extra !== 'number' || state.forecast.extra < 0) state.forecast.extra = 0;
+  state.version = 9;
+  return state;
 }
 
 // Fill v8 fields into an older saved state so v1–v7 saves keep working.

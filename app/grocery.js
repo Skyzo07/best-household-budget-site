@@ -122,6 +122,81 @@ export function addPriceItem(state, name) {
   return item;
 }
 
+// ---- Auto-plan next week from the pantry (v9) ----
+// Seven dinners built from what the cupboard already holds: each dish
+// names the staples it needs, priced at what the household actually
+// pays for them (the November price from the table above, or the pantry
+// restock price). "Plan next week" writes the seven dishes into next
+// week's plan as overrides — so flipping to next week shows them — and
+// remembers the plan, so the ingredients can be added to the list with
+// one press. Nothing is invented: dish costs are the household's own
+// dinner costs, and every ingredient price matches the list or pantry.
+export const PANTRY_DISHES = [
+  { dish: 'Bean chilli & rice', cost: 11.40, needs: [{ name: 'Tinned beans', price: 2.60 }, { name: 'Arborio rice 1 kg', price: 3.40 }] },
+  { dish: 'Lentil curry & naan', cost: 12.30, needs: [{ name: 'Red lentils 500 g', price: 2.10 }, { name: 'Naan bread', price: 1.15 }] },
+  { dish: 'Veggie stir-fry & rice', cost: 11.80, needs: [{ name: 'Soy sauce', price: 4.20 }, { name: 'Arborio rice 1 kg', price: 3.40 }] },
+  { dish: 'Pasta bake', cost: 13.20, needs: [{ name: 'Spaghetti 500 g', price: 1.85 }, { name: 'Cheddar block 400 g', price: 6.75 }] },
+  { dish: 'Homemade pizza night', cost: 13.60, needs: [{ name: 'Pizza bases', price: 2.80 }, { name: 'Mozzarella 250 g', price: 4.10 }] },
+  { dish: 'Salmon & roast potatoes', cost: 21.50, needs: [{ name: 'Salmon fillets 400 g', price: 17.20 }, { name: 'Potatoes 2 kg', price: 3.90 }] },
+  { dish: 'Roast chicken & vegetables', cost: 18.20, needs: [{ name: 'Whole chicken 1.6 kg', price: 13.60 }, { name: 'Mixed vegetables 1 kg', price: 4.80 }] },
+];
+
+export function autoPlanNextWeek(state) {
+  if (!state.grocery) state.grocery = { offset: 0, list: [], pantry: [], overrides: {} };
+  const next = (state.grocery.offset || 0) + 1;
+  const dishes = PANTRY_DISHES.map((d) => ({ dish: d.dish, cost: d.cost }));
+  dishes.forEach((d, i) => setMealOverride(state, next, i, d.dish, d.cost));
+  state.grocery.autoPlan = { offset: next, dishes };
+  state.sample = false;
+  return state.grocery.autoPlan;
+}
+
+// Ingredients the auto-plan needs that are NOT already on the grocery
+// list (still to buy). A staple already listed is not bought twice.
+export function missingPlanIngredients(state) {
+  const plan = state.grocery && state.grocery.autoPlan;
+  if (!plan) return [];
+  const list = (state.grocery && state.grocery.list) || [];
+  const seen = {};
+  const out = [];
+  for (const d of PANTRY_DISHES) {
+    for (const need of d.needs) {
+      if (seen[need.name]) continue;
+      seen[need.name] = true;
+      if (list.some((i) => i.name === need.name && !i.checked)) continue;
+      out.push(need);
+    }
+  }
+  return out;
+}
+
+// Put every missing ingredient for the auto-plan onto the grocery list
+// at its usual price. Returns the items added (empty when the list
+// already covers the whole plan).
+export function autoPlanIngredients(state) {
+  const missing = missingPlanIngredients(state);
+  if (!state.grocery) return [];
+  const added = [];
+  for (const need of missing) {
+    const item = { id: uid('groc'), name: need.name, qty: 1, price: need.price, checked: false, pantryId: '' };
+    state.grocery.list.push(item);
+    added.push(item);
+  }
+  if (added.length) state.sample = false;
+  return added;
+}
+
+// Drop the auto-plan and hand next week back to the rotating plan.
+export function clearAutoPlan(state) {
+  if (!state.grocery || !state.grocery.autoPlan) return;
+  const off = state.grocery.autoPlan.offset;
+  if (state.grocery.overrides) {
+    for (let i = 0; i < 7; i++) delete state.grocery.overrides[off + ':' + i];
+  }
+  delete state.grocery.autoPlan;
+  state.sample = false;
+}
+
 export function renderGrocery(state, root) {
   const key = state.currentMonth;
   const grocery = state.grocery || { offset: 0, list: [], pantry: [], overrides: {} };
@@ -174,6 +249,27 @@ export function renderGrocery(state, root) {
     + '<table><thead><tr><th>Staple</th><th class="amount">Sep</th><th class="amount">Oct</th><th class="amount">Nov</th><th class="amount">Since Sep</th><th>Cheapest store</th><th></th></tr></thead><tbody>' + priceRows + '</tbody></table>'
     + '<p class="muted small">The whole basket of eight costs <b>' + money(basketNov) + '</b> in November, against ' + money(basketSep) + ' in September — up ' + money(basketUp) + ' (' + basketPct.toFixed(1) + '%) in two months. Eggs climbed fastest (+10.2%); salmon the least (+4.9%). Shopping the cheapest store per staple instead of one store for everything saves roughly ' + money(Math.round(basketNov * 0.04 * 100) / 100) + ' a week on this basket alone.</p></div>';
 
+  // Next week's auto-plan, when one exists: the seven pantry dinners,
+  // their total, and what still needs buying for them.
+  const plan = grocery.autoPlan;
+  let autoPlanCard = '';
+  if (plan) {
+    const planCost = plan.dishes.reduce((a, d) => a + d.cost, 0);
+    const missing = missingPlanIngredients(state);
+    const missingTotal = missing.reduce((a, n) => a + n.price, 0);
+    const planRows = plan.dishes.map((d, i) => '<tr><td><b>' + DAYS[i] + '</b></td><td>' + esc(d.dish) + '</td><td class="amount">' + money(d.cost) + '</td></tr>').join('');
+    autoPlanCard = '<div class="card" style="margin-top:16px"><h2>Next week is planned from the pantry — ' + weekLabel(plan.offset) + '</h2>'
+      + '<p class="muted small" style="margin-top:0">Seven dinners built from what the cupboard already holds — beans, lentils, rice, pasta, the chicken and salmon from the list. Flip to next week above and these dishes are already in the plan; edit any of them like any other dinner.</p>'
+      + '<table><thead><tr><th>Day</th><th>Dinner</th><th class="amount">Cost</th></tr></thead><tbody>' + planRows + '</tbody></table>'
+      + '<p class="muted small">Week total <b>' + money(planCost) + '</b> for 7 dinners · ' + money0(planCost / 7) + ' a dinner · ' + money(planCost / 4) + ' per person for the week.</p>'
+      + '<p>' + (missing.length
+        ? '<button class="btn small" data-auto-ingredients>Add the ' + missing.length + ' missing ingredient' + (missing.length === 1 ? '' : 's') + ' to the list — ' + money(missingTotal) + '</button> '
+        : '<span class="pos"><b>Every ingredient is already on the grocery list.</b></span> ')
+      + '<button class="btn small ghost" data-auto-clear>Clear this plan</button></p>'
+      + (missing.length ? '<p class="muted small">Still to buy for next week: ' + missing.map((n) => esc(n.name) + ' (' + money(n.price) + ')').join(', ') + '. The rest is already in the cupboard or on the list.</p>' : '')
+      + '</div>';
+  }
+
   root.innerHTML =
     '<div class="page-head"><div><h1>Groceries &amp; meals</h1><p class="muted">One weekly plan, one priced list, one shop. Plan the dinners, tick the list off in the store, then press “Buy this list” and the shop lands in Transactions as one real grocery expense.</p></div>'
     + '<div><button class="btn primary" id="btn-add-groc">+ Add grocery item</button> <button class="btn ghost" id="btn-buy-list"' + (t.left === 0 ? ' disabled' : '') + '>Buy this list — ' + money(t.toBuy) + '</button></div></div>'
@@ -188,12 +284,13 @@ export function renderGrocery(state, root) {
     + '<table><thead><tr><th>Day</th><th>Dinner</th><th class="amount">Cost</th></tr></thead><tbody>' + mealRows + '</tbody></table>'
     + '<p class="muted small">Week total <b>' + money(weekCost) + '</b> for 7 dinners · ' + money(weekCost / 4) + ' per person for the week. '
     + 'A home-cooked dinner here averages ' + money0(weekCost / 7) + '; the household’s dining-out average is about $46 a visit.</p>'
-    + '<p><button class="btn small ghost" data-week="-1">‹ Previous week</button> <button class="btn small ghost" data-week="1">Next week ›</button></p></div>'
+    + '<p><button class="btn small ghost" data-week="-1">‹ Previous week</button> <button class="btn small ghost" data-week="1">Next week ›</button> <button class="btn small" data-auto-plan>Plan next week from the pantry</button></p></div>'
     + '<div class="card"><h2>Grocery list</h2><p class="muted small" style="margin-top:0">Tick items off as you put them in the trolley. The total counts only what is still to buy.</p>'
     + (grocery.list.length ? '<ul class="tx-list grocery-list">' + listRows + '</ul>' : '<p class="empty">The list is empty — add the first item above, or restock a pantry staple below.</p>')
     + '<p class="muted small">Total ' + money(t.total) + ' · bought ' + money(t.bought) + ' · still to buy <b>' + money(t.toBuy) + '</b>. '
     + (t.left > 0 ? '<button class="btn small" id="btn-buy-list-2">Buy this list — ' + money(t.toBuy) + '</button> ' : '')
     + '<button class="btn small ghost" id="btn-clear-bought">Clear bought items</button></p></div></div>'
+    + autoPlanCard
     + '<div class="card" style="margin-top:16px"><h2>Pantry staples</h2><p class="muted small" style="margin-top:0">The cupboard, at a glance. “Add to list” puts a restock on the grocery list at its usual price — no re-typing, no forgotten oil.</p>'
     + '<ul class="tx-list">' + pantryRows + '</ul>'
     + '<p class="muted small">Tip: shop the list once a week instead of topping up daily. Groceries averaged ' + money(groceryAvg3(state, key)) + ' a month over the last three months — one big shop a week, planned from the dinners above, is where the saving hides.</p></div>'

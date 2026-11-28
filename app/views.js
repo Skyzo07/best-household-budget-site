@@ -131,6 +131,24 @@ export function renderDashboard(state, root) {
   const subT = subTotals(state, key);
   const subStrip = '<div class="card" style="margin-top:16px"><h2>Subscription audit <a href="#/subscriptions">Audit subscriptions →</a></h2><div class="savings-strip"><p style="margin:0">' + subT.activeCount + ' subscriptions cost <b>' + money(subT.monthly) + ' a month</b> · ' + money(subT.yearly) + ' a year</p><p style="margin:0">' + (subT.totalSaving > 0 ? 'Cancel the ' + subT.cancelCount + ' unused and downgrade the ' + subT.downgradeCount + ' barely-used to save <b>' + money(subT.totalSaving) + ' a year</b>' : 'Every subscription earned its place this month — nothing to cancel') + '</p><p style="margin:0"><a class="btn small ghost" href="#/subscriptions">See the verdicts</a></p></div></div>';
 
+  // Forecast at a glance: next month on current form — the six-month
+  // average spend against the three-month average income, and when the
+  // emergency fund fills at that pace. The full forecast (trend, per
+  // category confidence, method switch) lives on the Forecast page.
+  const fcKeys = lastMonths(key, 6);
+  let fcSpend = 0;
+  for (const c of CATEGORIES) {
+    if (c.budget <= 0) continue;
+    const vals = fcKeys.map((k) => (categorySpend(state, k)[c.id] || 0));
+    fcSpend += vals.reduce((a, b) => a + b, 0) / 6;
+  }
+  const fcInc = lastMonths(key, 3).reduce((a, k) => a + monthTotals(state, k).income, 0) / 3;
+  const fcSaved = Math.round((fcInc - fcSpend) * 100) / 100;
+  const fcFund = (state.goals || []).find((g) => g.id === 'goal-emergency') || (state.goals || [])[0];
+  const fcGap = fcFund ? Math.max(0, Math.round((fcFund.target - fcFund.saved) * 100) / 100) : 0;
+  const fcMonths = fcFund && fcGap > 0 && fcSaved > 0 ? Math.ceil(fcGap / fcSaved) : 0;
+  const fcStrip = '<div class="card" style="margin-top:16px"><h2>Next month, on current form <a href="#/forecast">Full forecast →</a></h2><div class="savings-strip"><p style="margin:0">' + monthLabel(shiftMonth(key, 1)) + ' looks like income <b>' + money(fcInc) + '</b> against spending of about <b>' + money(fcSpend) + '</b> — roughly <b>' + money(fcSaved) + '</b> left over</p><p style="margin:0">' + (fcFund ? (fcGap <= 0 ? 'The ' + esc(fcFund.name) + ' is already fully funded.' : 'The ' + esc(fcFund.name) + ' still needs ' + money(fcGap) + (fcMonths ? ' — at this pace it fills in <b>' + monthLabel(shiftMonth(key, fcMonths)) + '</b>' : ' — and at this pace it has no date yet') + '.') : '') + '</p><p style="margin:0"><a class="btn small ghost" href="#/forecast">See the forecast</a></p></div></div>';
+
   root.innerHTML =
     (state.sample ? '<div class="sample-note"><strong>Sample household loaded</strong> — the Hartono family’s November budget. Edit or delete anything, or press <strong>Reset sample data</strong> to start clean.</div>' : '')
     + '<div class="page-head"><div><h1>Your month at a glance</h1><p class="muted">' + monthLabel(key) + ' · Two incomes, two kids, one plan. Here is where the household stands right now.</p></div>'
@@ -181,6 +199,7 @@ export function renderDashboard(state, root) {
     + savingsStrip
     + envStrip
     + subStrip
+    + fcStrip
     + (grocList.length ? '<div class="card" style="margin-top:16px"><h2>Groceries &amp; meals <a href="#/grocery">Plan &amp; list →</a></h2><p style="margin-top:0">Dinner is planned for all 7 nights this week. The grocery list stands at <b>' + money(grocToBuy) + ' still to buy</b> — ' + grocLeft + ' of ' + grocList.length + ' items left, ' + money(grocTotal) + ' in total. Tick items off in the store, then post the shop into Transactions with one press.</p></div>' : '');
   drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
 }

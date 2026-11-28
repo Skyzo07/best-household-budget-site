@@ -64,6 +64,20 @@ account, no server, nothing leaves your browser. Built for the make.fun
   their own banked share of it — Sofia banking her $0.50 into the holiday
   moves it from $980.00 to $980.50 and the card says so — so a kid can see
   their own money moving a goal, not just the household total.
+- **Forecast** — next month, worked out from the household's own
+  six-month history, not typed in: a projection for every budgeted
+  category with a confidence note from how jumpy its last six months
+  were (steady months are worth trusting, wild ones are a rough guide
+  only), a projected month-end balance, a keep-this-pace yearly saving
+  for 2027, and the date the emergency fund reaches its target at that
+  pace. Switch the method — **Trend** (a line fitted through six
+  months, read one month ahead), **6-month average**, or **Budget
+  plan** (what the month costs if every limit is spent in full) — and
+  every figure recomputes; type an extra monthly saving and the
+  fund date and the yearly pace move at once. The biggest riser — the
+  category whose projection sits furthest above its own average — is
+  called out in plain words. Add a transaction anywhere and the
+  forecast moves with it. The Dashboard shows next month at a glance.
 - **Groceries & meals** — a weekly dinner plan for four (two rotating
   weeks; edit any dish or its cost and the week total updates), a priced
   grocery list with a running total checked against the weekly grocery
@@ -76,6 +90,11 @@ account, no server, nothing leaves your browser. Built for the make.fun
   the one on the grocery list, so table and list always agree; “Add at $…”
   puts any staple on the list at this month’s price. The eight-staple
   basket costs $65.85 in November, up $3.75 (+6.0%) since September.
+  **Plan next week from the pantry:** one press writes seven dinners
+  built from cupboard staples (bean chilli, lentil curry, pasta bake,
+  pizza night, salmon, roast chicken…) into next week’s plan, shows
+  the week total, and offers the missing ingredients on the list at
+  their usual prices — nothing is bought twice.
 - **Cash envelopes** — the month’s money in six envelopes (Groceries,
   Dining out, Transport, Kids & school, Fun & family, Household), each
   filled at payday from the household’s own budgets. Every expense draws
@@ -141,7 +160,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   now subscriptions and banked allowances are added without losing your
   transactions. v8 adds the payoff method and a third sample debt (a
   store card) and records banked allowances with their destination goal,
-  so older saves migrate in place too.
+  so older saves migrate in place too. v9 adds the forecast settings
+  (method + extra saving) and the pantry auto-plan, both defaulted for
+  older saves.
 
 ## Tech
 
@@ -149,7 +170,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The nine newer sections are one-job
+  (routing, dialogs, CRUD, export). The ten newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar),
   `annual.js` (year overview), `reports.js` (printable summary, debt-payoff
@@ -161,7 +182,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   no-spend days, round-up pot), `envelopes.js` (cash envelopes — fills,
   rollovers, transfers, per-envelope spending), `subscriptions.js`
   (subscription audit — keep / downgrade / cancel verdicts, totals and
-  savings, add / cancel / restore / downgrade). `favicon.ico` is a hand-drawn
+  savings, add / cancel / restore / downgrade), `forecast.js` (spending
+  forecast — per-category projections from the six-month trend, confidence
+  notes, projected month-end, yearly pace, emergency-fund date). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -188,10 +211,10 @@ to the output directory and writes `dossier.json` with the vendored
 
 ## Screenshots
 
-- `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips (desktop, 1280×800)
-- `screenshots/2-reports.png` — Reports: snowball vs avalanche comparison table and recommendation (desktop, 1280×800)
-- `screenshots/3-subscriptions.png` — Subscription audit: verdicts, yearly savings, cancel-the-flagged control (desktop, 1280×800)
-- `screenshots/4-savings-phone.png` — Savings challenges on a phone (390×844)
+- `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips and the new next-month forecast strip (desktop, 1280×800)
+- `screenshots/2-forecast.png` — Forecast: method switch (Trend / 6-month average / Budget plan), projected December income, spending, month-end and 2027 pace (desktop, 1280×800)
+- `screenshots/3-reports.png` — Reports: snowball vs avalanche comparison table and recommendation (desktop, 1280×800)
+- `screenshots/4-grocery-phone.png` — Groceries & meals on a phone (390×844): the pantry auto-plan card for next week — seven dinners, week total, missing ingredients
 
 ## License
 
