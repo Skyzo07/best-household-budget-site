@@ -132,6 +132,17 @@
 // 101,007 bytes gzip-9 (nextmonth.js 6,953 lazy); whole app 26 files,
 // 523,787 bytes. Verified: /tmp/bhb-v18-verify.mjs, 104/104 checks
 // PASS, 0 JS errors, 0 external requests.
+// v19 adds rules.js (lazy too): house rules — the seven rules the
+// household agreed, each checked live against the month on screen's
+// own records (payday auto-save runs, category caps, no-spend days,
+// a per-meal takeaway limit that names the dinners that broke it,
+// the save rate, subscriptions untouched for 60 days), with a
+// working add-rule form and delete; plus a Goals top-up from
+// unassigned cash — one press moves $100 of the $21,225.35 sitting
+// unassigned in the main account into a goal, and the goal balance
+// and the unassigned figure move together, both read off the Net
+// worth page's own arithmetic. Verified: /tmp/bhb-v19-verify.mjs,
+// 70/70 checks PASS, 0 JS errors, 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

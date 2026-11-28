@@ -166,6 +166,27 @@ account, no server, nothing leaves your browser. Built for the make.fun
   $30,177.76 actually saved in the first eleven months of 2026, and
   the emergency fund ($4,350.00 of $6,000.00) reaches its target in
   about 17 months at the payday pace alone.
+- **House rules (v19)** — the seven rules the Hartono household agreed,
+  and whether November actually kept them — each one checked live
+  against the month's own records, never typed in by hand. **5 of 7
+  kept:** "Save $100 on payday" ($100.00 moved by auto-save on Nov 1),
+  "Groceries under $620" ($619.35 — $0.65 of slack), "Dining under
+  $240" ($137.55), "One no-spend day a week" (6 days marked), "Save at
+  least 40% of income" ($2,791.51 of $5,850.00 — 47.7%). **2 broken,
+  and the page says what they cost:** "No takeaway over $40 without
+  talking" — two dinners broke it (Family dinner out $46.80, Lunch
+  with friends $52.25, $19.05 over the line) — and "No subscription
+  unused for 60 days" — Duolingo Plus (61 days untouched) and National
+  Geographic (77 days), $19.98 a month sitting idle — **$39.03 a month
+  between them**. Every broken rule names what to do and links to the
+  page that fixes it (the takeaway rule to the money meeting, the
+  subscriptions to the audit). **Add a rule** that works: pick the kind
+  (spending cap, save rate, no-spend days, takeaway limit, payday
+  saving, unused subscriptions), give it a number, and the page starts
+  checking it from the next render — "Fun under $150" lands as kept
+  ($118.00 in November); a rule with no name, no number, or a save
+  rate over 100% is refused with the reason on screen. Delete takes a
+  rule off the board.
 - **Monthly money meeting (v17)** — once a month, around the table. The
   page builds the agenda itself from the household's own records: six
   wins (11 of 11 months inside the $3,800.00 plan, net worth positive
@@ -376,7 +397,16 @@ account, no server, nothing leaves your browser. Built for the make.fun
   $150.00 to go), the rest quiet. A goal that reaches 100% gets a
   **fully-funded celebration** — a banner across the page and a cheer on
   its own card — with a **Start a new goal** button that opens the new-goal
-  form right there.
+  form right there. **Top up from unassigned cash (v19):** the page
+  opens with the $21,225.35 of cash the household kept that has no job
+  yet — not in a goal, not in the 52-week challenge, not in the
+  round-up pot, not in a cash envelope — and every goal card carries a
+  **Top up $100 from unassigned** button. One press moves $100.00 of
+  that cash into the goal (emergency fund $4,350.00 → $4,450.00, and
+  the unassigned figure falls to $21,125.35 at the same moment); the
+  Net worth page agrees, because both figures are read off the same
+  arithmetic. With less than $100 unassigned left the button says so
+  instead of moving money that is not there.
 - **Savings challenges** — three challenges that turn small change into real
   savings, all tied to the household's own figures: the **52-week
   challenge** (growing $1→$52, reverse $52→$1, or flat $10 a week — $1,378
@@ -452,6 +482,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   notes, done date, next date), defaulted for older saves. v18 adds the
   adopted next-month plan record (the budgets and fills it wrote, and what
   they were before, so Undo can put them back), defaulted for older saves.
+  v19 adds the house rules (seven sample rules: payday saving, two
+  spending caps, no-spend days, takeaway limit, save rate, unused
+  subscriptions), defaulted for older saves.
 
 ## Tech
 
@@ -459,7 +492,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The eighteen newer sections are one-job
+  (routing, dialogs, CRUD, export). The nineteen newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -505,7 +538,11 @@ account, no server, nothing leaves your browser. Built for the make.fun
   suggested budgets from this month's spend, envelope fills from those
   budgets plus rollovers, bills due, big purchases coming up, auto-save
   runs scheduled, with Adopt that writes the plan into the budgets and
-  envelopes and Undo that puts it back).
+  envelopes and Undo that puts it back), `rules.js` (house rules — the
+  seven rules the household agreed, each checked live against the
+  month's own records: payday auto-save runs, category caps, no-spend
+  days, a per-meal takeaway limit, the save rate, subscriptions
+  untouched for 60 days; add-rule form and delete).
   `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
@@ -537,9 +574,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-nextmonth.png` — Next month — December 2026: $5,850.00 in, planned spending $3,090.00 ($710.00 of budget freed), projected saving $2,760.00, bills due $2,249.59, and the Adopt this plan button (desktop, 1280×800)
-- `screenshots/3-meeting.png` — Monthly money meeting: $5,850.00 in for November, 0 of 8 decisions made, 6 wins and 5 flags (desktop, 1280×800)
-- `screenshots/4-grocery-phone.png` — Groceries & meals on a phone (390×844), scrolled to the price alerts: 7 staples up more than 5% since September, eggs up 10.2% at SuperMart
+- `screenshots/2-rules.png` — House rules: 5 of 7 kept in November 2026, the two broken rules costing $39.03 a month, every verdict carrying its exact figure (desktop, 1280×800)
+- `screenshots/3-goals.png` — Savings goals: $21,225.35 of unassigned cash on top, the three goals with their rings and milestones below (desktop, 1280×800)
+- `screenshots/4-insights-phone.png` — Insights on a phone (390×844), six-month trend and category drill-down, no horizontal overflow
 
 ## License
 

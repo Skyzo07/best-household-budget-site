@@ -308,10 +308,18 @@ export function renderGoals(state, root) {
   const fundedBanner = funded.length
     ? '<div class="alert ok" role="status"><strong>🎉 ' + funded.map((g) => esc(g.name)).join(', ') + (funded.length === 1 ? ' is' : ' are') + ' fully funded!</strong> ' + money(funded.reduce((a, g) => a + g.saved, 0)) + ' saved and waiting to be spent on what it was for. Ready for the next one? <button type="button" class="btn small" data-goal-new="1">Start a new goal</button></div>'
     : '';
+  // Unassigned cash (v19): what the household kept that is not in a
+  // goal, the 52-week challenge, the round-up pot or a cash envelope
+  // — read off the Net worth page's own arithmetic, so the figure
+  // here and the figure there are always the same number. One press
+  // on a goal card moves $100 of it into that goal.
+  const nw = networthSummary(state);
+  const unassignedCard = '<div class="card" style="margin-bottom:16px"><h2>' + money(nw.unassigned) + ' of unassigned cash</h2><p>Money the household kept that has no job yet — not in a goal, not in the 52-week challenge, not in the round-up pot, not in a cash envelope. It sits in the main account doing nothing. Press <strong>Top up $100 from unassigned</strong> on any goal below to give $100 of it a job — the goal balance and this figure move together. <a href="#/networth">See where it comes from on the Net worth page →</a></p></div>';
   root.innerHTML =
     '<div class="page-head"><div><h1>Savings goals</h1><p class="muted">Give every dollar a job before the month starts. ' + money(totalSaved) + ' saved toward ' + money(totalTarget) + ' in goals — ' + pctAll + '% of the way there.</p></div>'
     + '<div><button class="btn primary" id="btn-add-goal">+ New goal</button></div></div>'
     + fundedBanner
+    + unassignedCard
     + '<div class="goal-grid">'
     + state.goals.map((g) => {
         const pct = g.target ? (g.saved / g.target) * 100 : 0;
@@ -340,7 +348,7 @@ export function renderGoals(state, root) {
           + '<p class="mile-chips">' + mileChips + '</p>'
           + mileLine
           + fundedLine
-          + '<div class="goal-actions"><button class="btn small" data-add-goal="' + g.id + '">+ $100</button><button class="btn small ghost" data-edit-goal="' + g.id + '">Edit</button><button class="btn small danger" data-del-goal="' + g.id + '">Delete</button></div></div>';
+          + '<div class="goal-actions"><button class="btn small" data-add-goal="' + g.id + '">+ $100</button><button class="btn small" data-goal-topup="' + g.id + '">Top up $100 from unassigned</button><button class="btn small ghost" data-edit-goal="' + g.id + '">Edit</button><button class="btn small danger" data-del-goal="' + g.id + '">Delete</button></div></div>';
       }).join('')
     + '</div>'
     + '<div class="card" style="margin-top:16px"><h2>How to reach a goal faster</h2><p>Pick the date first, then work backwards: a $2,400 holiday in 8 months is $300 a month — less than most households spend on takeaway. Automate the transfer on payday, and round every grocery shop down to the nearest $10 and move the difference here.</p><p class="muted small">Press <strong>+ $100</strong> on a card to record a contribution, or Edit to change the target, the amount saved, or the date.</p></div>';

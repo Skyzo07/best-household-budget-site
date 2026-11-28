@@ -1,6 +1,6 @@
 // Hearth & Home Budget — app shell: routing, dialogs, add/edit/delete,
 // CSV export and reset. State lives in data.js and persists to localStorage.
-import { loadState, saveState, sampleState, CATEGORIES, categoryById, meetingForMonth, money, monthLabel, todayISO, uid, monthTransactions, memberChallengeStore } from './data.js';
+import { loadState, saveState, sampleState, CATEGORIES, categoryById, meetingForMonth, money, monthLabel, networthSummary, todayISO, uid, monthTransactions, memberChallengeStore } from './data.js';
 import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights, setInsightCat } from './views.js';
 
 let state = loadState();
@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -57,6 +57,7 @@ async function showView(route) {
   if (route === 'autosave') (await import('./autosave.js')).renderAutosave(state, root);
   if (route === 'meeting') (await import('./meeting.js')).renderMeeting(state, root);
   if (route === 'nextmonth') (await import('./nextmonth.js')).renderNextmonth(state, root);
+  if (route === 'rules') (await import('./rules.js')).renderRules(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -72,6 +73,12 @@ async function renderMeetingLive() {
 async function renderNextmonthLive() {
   if (currentRoute() !== 'nextmonth') return;
   (await import('./nextmonth.js')).renderNextmonth(state, $('#view-nextmonth'));
+}
+
+// Re-render just the House rules view (used after adding or deleting a rule).
+async function renderRulesLive() {
+  if (currentRoute() !== 'rules') return;
+  (await import('./rules.js')).renderRules(state, $('#view-rules'));
 }
 
 // Re-render just the Reports view (used while typing in the payoff planner).
@@ -625,6 +632,32 @@ app.addEventListener('click', async (e) => {
     return;
   }
   if (t.closest('[data-nm-print]')) { window.print(); return; }
+  // ---- House rules (v19): add, delete ----
+  if (t.closest('[data-rule-add]')) {
+    const rules = await import('./rules.js');
+    const err = $('#hr-error');
+    const added = rules.addHouseRule(state, $('#hr-text').value, $('#hr-kind').value, $('#hr-limit').value, $('#hr-cat').value, $('#hr-goal').value);
+    if (added) {
+      persist();
+      rerender();
+      window.alert('Rule added: “' + added.text + '” — the page is already checking it against ' + monthLabel(state.currentMonth) + '’s records.');
+    } else if (err) {
+      err.textContent = 'That rule is missing something — give it a name, pick a kind, and a limit above 0 (a spending cap also needs a category, a save rate needs 100 or less).';
+      err.hidden = false;
+    }
+    return;
+  }
+  const ruleDelBtn = t.closest('[data-rule-del]');
+  if (ruleDelBtn) {
+    const rules = await import('./rules.js');
+    const r = (state.houseRules || []).find((x) => x.id === ruleDelBtn.dataset.ruleDel);
+    if (r && window.confirm('Delete the rule “' + r.text + '”? It stops being checked from now on.')) {
+      rules.deleteHouseRule(state, r.id);
+      persist();
+      rerender();
+    }
+    return;
+  }
   // ---- Monthly money meeting (v17): decisions, done, reopen ----
   const mtDecideBtn = t.closest('[data-mt-decide]');
   if (mtDecideBtn) {
@@ -821,6 +854,25 @@ app.addEventListener('click', async (e) => {
   if (addGoal) {
     const g = state.goals.find((x) => x.id === addGoal.dataset.addGoal);
     if (g) { g.saved = Math.round((g.saved + 100) * 100) / 100; state.sample = false; persist(); rerender(); }
+    return;
+  }
+  // ---- Goals top-up from unassigned cash (v19): move $100 of the
+  // cash sitting unassigned in the main account into a goal, one
+  // press. The Net worth page is where that cash comes from — it is
+  // what the household kept minus goals, challenge, pot and
+  // envelopes — so the goal balance and the unassigned figure move
+  // together and can never disagree.
+  const topupBtn = t.closest('[data-goal-topup]');
+  if (topupBtn) {
+    const g = state.goals.find((x) => x.id === topupBtn.dataset.goalTopup);
+    const unassigned = networthSummary(state).unassigned;
+    if (!g) return;
+    if (unassigned < 100) { window.alert('Only ' + money(Math.max(0, unassigned)) + ' of unassigned cash is left — less than the $100 top-up. Save more this month and it grows again.'); return; }
+    g.saved = Math.round((g.saved + 100) * 100) / 100;
+    state.sample = false;
+    persist();
+    rerender();
+    window.alert('Moved $100.00 of unassigned cash into ' + g.name + ' — it now holds ' + money(g.saved) + ', and ' + money(networthSummary(state).unassigned) + ' is still unassigned.');
     return;
   }
   const editGoal = t.closest('[data-edit-goal]');

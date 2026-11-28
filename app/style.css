@@ -349,3 +349,13 @@ sideways on a narrow screen instead of pushing the page wide. */
 .mt-ico.good { background: #1d6b4f22; color: #1d6b4f; }
 .mt-ico.flag { background: #b3382e22; color: #b3382e; }
 .table-scroll { overflow-x: auto; }
+
+/* v19 — house rules. A broken rule's card carries a red left edge so
+the two that need a decision stand out in the grid; the verdict line
+is the evidence, not a slogan, and the fix line points at the page
+that actually fixes it. */
+.rule-card.rule-broken { border-left: 5px solid var(--red); }
+.rule-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.rule-top h3 { flex: 1; min-width: 0; }
+.rule-evidence { margin: .5em 0; }
+.rule-fix { font-size: .92rem; }

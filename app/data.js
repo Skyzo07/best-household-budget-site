@@ -564,6 +564,54 @@ export function nextmonthStore(state) {
   return state.nextmonth;
 }
 
+// ---- House rules (v19) ----
+// The seven rules the Hartono household agreed at its first money
+// meeting. Each one is a kind the checker in rules.js knows how to
+// measure, a number, and — for a cap — the category it watches.
+// November keeps five and breaks two: the takeaway limit (two
+// dinners over $40) and the unused-subscription rule (Duolingo and
+// National Geographic untouched for over 60 days). A rule the page
+// cannot measure — a bad kind, a missing number — is dropped rather
+// than shown as a verdict nobody can trust.
+export function sampleHouseRules() {
+  return [
+    { id: 'hr-payday', text: 'Save $100 on payday', kind: 'payday', limit: 100, category: '', goalId: 'goal-emergency' },
+    { id: 'hr-groceries', text: 'Groceries under $620', kind: 'cap', limit: 620, category: 'groceries', goalId: '' },
+    { id: 'hr-dining', text: 'Dining under $240', kind: 'cap', limit: 240, category: 'dining', goalId: '' },
+    { id: 'hr-nospend', text: 'One no-spend day a week', kind: 'nospend', limit: 4, category: '', goalId: '' },
+    { id: 'hr-takeaway', text: 'No takeaway over $40 without talking', kind: 'takeaway', limit: 40, category: '', goalId: '' },
+    { id: 'hr-saverate', text: 'Save at least 40% of income', kind: 'saverate', limit: 40, category: '', goalId: '' },
+    { id: 'hr-subs', text: 'No subscription unused for 60 days', kind: 'subunused', limit: 60, category: '', goalId: '' },
+  ];
+}
+
+// The house rules, filled in for an older save. A rule missing its
+// text, its kind or its number is dropped — the page would rather
+// show six honest rules than seven with one it cannot check.
+export function houseRulesStore(state) {
+  if (!Array.isArray(state.houseRules)) state.houseRules = sampleHouseRules();
+  state.houseRules = state.houseRules.filter((r) => r && typeof r.text === 'string' && r.text.trim()
+    && ['payday', 'cap', 'nospend', 'takeaway', 'saverate', 'subunused'].includes(r.kind)
+    && typeof r.limit === 'number' && r.limit > 0);
+  for (const r of state.houseRules) {
+    if (typeof r.category !== 'string') r.category = '';
+    if (typeof r.goalId !== 'string') r.goalId = '';
+  }
+  return state.houseRules;
+}
+
+// Fill v19 fields into an older saved state so v1–v18 saves keep working.
+// v19 adds the house rules (empty = no rules yet, the page falls back
+// to the seven sample rules). The version bump records that the save
+// has been seen by v19 code.
+export function ensureV19(state) {
+  if (!state) return sampleState();
+  ensureV18(state);
+  houseRulesStore(state);
+  state.version = 19;
+  return state;
+}
+
 // Fill v17 fields into an older saved state so v1–v16 saves keep working.
 // v17 adds the monthly money meeting records (empty = no meeting held
 // yet, the page falls back to the November seed). The version bump
@@ -633,7 +681,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 18,
+    version: 19,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -664,6 +712,12 @@ export function sampleState() {
     // the budgets and envelope fills it wrote, and what they were
     // before, so Undo puts it all back. Null until a plan is adopted.
     nextmonth: null,
+    // House rules (v19): the seven rules the household agreed — five
+    // kept in November, two broken (takeaway over $40 twice, two
+    // subscriptions untouched for over 60 days). The verdicts are
+    // computed live in rules.js, so the records here are only the
+    // rule, its kind and its number.
+    houseRules: sampleHouseRules(),
     // Banked unspent allowance (v15): what each person already moved
     // into savings — Maya $145, Daniel $40, Sofia $15, Liam $10, $210
     // between them, all into the emergency fund. The emergency fund's
@@ -687,7 +741,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV18(parsed);
+    return ensureV19(parsed);
   } catch {
     return sampleState();
   }
