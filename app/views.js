@@ -109,6 +109,18 @@ export function renderDashboard(state, root) {
       + '<div class="bar"><i style="width:' + Math.min(100, pct).toFixed(1) + '%;background:' + r.color + '"></i></div></div>';
   }).join('');
 
+  // Savings challenges at a glance: 52-week progress, no-spend days, pot.
+  const ch52 = state.challenges && state.challenges.fiftyTwo;
+  const chPaid = (ch52 && Array.isArray(ch52.paid)) ? ch52.paid : [];
+  const chMode = (ch52 && ch52.mode) || 'grow';
+  const chWeekAmt = (w) => chMode === 'reverse' ? 53 - w : chMode === 'flat' ? 10 : w;
+  const chSaved = chPaid.reduce((a, w) => a + chWeekAmt(w), 0);
+  const chTarget = chMode === 'flat' ? 520 : 1378;
+  const chNext = (() => { for (let w = 1; w <= 52; w++) if (!chPaid.includes(w)) return w; return 0; })();
+  const chNoSpend = (state.challenges && state.challenges.noSpend && state.challenges.noSpend[key]) || [];
+  const chPot = (state.challenges && state.challenges.roundUp && state.challenges.roundUp.pot) || 0;
+  const savingsStrip = '<div class="card" style="margin-top:16px"><h2>Savings challenges <a href="#/savings">Play along →</a></h2><div class="savings-strip"><p style="margin:0">52-week challenge: <b>' + money(chSaved) + ' of ' + money(chTarget) + '</b> · ' + chPaid.length + ' of 52 weeks paid' + (chNext ? ' · next week ' + chNext + ' is ' + money(chWeekAmt(chNext)) : ' · complete!') + '</p><p style="margin:0"><b>' + chNoSpend.length + ' no-spend days</b> this month · round-up pot <b>' + money(chPot) + '</b></p><p style="margin:0"><a class="btn small ghost" href="#/savings">Open challenges</a></p></div></div>';
+
   root.innerHTML =
     (state.sample ? '<div class="sample-note"><strong>Sample household loaded</strong> — the Hartono family’s November budget. Edit or delete anything, or press <strong>Reset sample data</strong> to start clean.</div>' : '')
     + '<div class="page-head"><div><h1>Your month at a glance</h1><p class="muted">' + monthLabel(key) + ' · Two incomes, two kids, one plan. Here is where the household stands right now.</p></div>'
@@ -156,6 +168,7 @@ export function renderDashboard(state, root) {
     + '<p class="muted small">Tip: move your saved amount into a goal the day payday lands — what you don’t see, you don’t spend.</p></div>'
     + '</div>'
     + '<div class="card" style="margin-top:16px"><h2>Pocket money &amp; allowances <a href="#/members">Everyone’s page →</a></h2><p class="muted small" style="margin-top:0">Each person’s free-spending money for ' + monthLabel(key) + ' — counted from their own tagged spending. No questions asked, no category to justify.</p><div class="allow-grid">' + allowanceRows + '</div></div>'
+    + savingsStrip
     + (grocList.length ? '<div class="card" style="margin-top:16px"><h2>Groceries &amp; meals <a href="#/grocery">Plan &amp; list →</a></h2><p style="margin-top:0">Dinner is planned for all 7 nights this week. The grocery list stands at <b>' + money(grocToBuy) + ' still to buy</b> — ' + grocLeft + ' of ' + grocList.length + ' items left, ' + money(grocTotal) + ' in total. Tick items off in the store, then post the shop into Transactions with one press.</p></div>' : '');
   drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
 }

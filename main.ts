@@ -1,15 +1,17 @@
 // Hearth & Home Budget — entrypoint (Node 22, standard library only).
-// v4: dashboard, transactions, budgets, bills & recurring (with a bill
+// v5: dashboard, transactions, budgets, bills & recurring (with a bill
 // calendar), groceries & meals, household members (one page per person),
-// savings goals, annual overview, insights and reports — the five newer
-// sections load on demand in the browser, so the first load stays small.
+// savings goals, savings challenges (52-week, no-spend days, round-up
+// pot), annual overview (with month drill-down), insights and reports —
+// the six newer sections load on demand in the browser, so the first load
+// stays small.
 // Hands the site in: copies app/ and screenshots/ beside this file into
 // /output (or MAKEFUN_OUTPUT_DIR outside the grader) and writes
 // /output/dossier.json with the vendored make.fun library. The dossier's
 // Totals line measures the first load: index.html + style.css + the four
 // core scripts (data, charts, views, main). bills.js, annual.js,
-// reports.js, grocery.js and members.js are fetched only when their nav
-// link is opened, so they do not count in the first load. Deterministic:
+// reports.js, grocery.js, members.js and savings.js are fetched only when
+// their nav link is opened, so they do not count in the first load. Deterministic:
 // the same input files always produce the same output bytes.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

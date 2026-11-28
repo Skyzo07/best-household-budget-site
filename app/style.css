@@ -204,6 +204,37 @@ td input[type="text"] { width: 100%; font: inherit; padding: 6px 8px; border: 1p
 .cal-chip.paid { background: var(--green-soft); color: var(--green-deep); text-decoration: line-through; }
 .cal-chip.over { background: var(--red-soft); color: var(--red); }
 
+/* ---- savings challenges (v5) ---- */
+.challenge-flex { display: flex; gap: 20px; align-items: flex-start; margin-top: 12px; }
+.challenge-ring { width: 132px; height: 132px; position: relative; flex: none; }
+.challenge-ring svg { display: block; }
+.challenge-ring .ring-label { position: absolute; inset: 0; display: grid; place-content: center; }
+.challenge-ring .ring-label b { font-size: 1.35rem; }
+.challenge-ring .ring-label span { font-size: .75rem; color: var(--muted); }
+.mode-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.week-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 6px; flex: 1; }
+.week-cell { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 6px 2px; cursor: pointer; display: grid; gap: 1px; justify-items: center; }
+.week-cell:hover { border-color: var(--green); }
+.week-cell .week-num { font-size: .72rem; color: var(--muted); }
+.week-cell .week-amt { font-size: .82rem; font-weight: 700; }
+.week-cell.paid { background: var(--green-soft); border-color: var(--green); }
+.week-cell.paid .week-num { color: var(--green-deep); }
+.week-cell.next { outline: 2px solid var(--gold); outline-offset: 1px; }
+.weekday-row, .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+.weekday-row span { text-align: center; font-size: .75rem; color: var(--muted); font-weight: 700; }
+.day-cell { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 9px 0; cursor: pointer; font-weight: 600; }
+.day-cell:hover { border-color: var(--green); }
+.day-cell.marked { background: var(--green-soft); border-color: var(--green); color: var(--green-deep); }
+.day-cell.blank { border-color: transparent; background: transparent; cursor: default; }
+tr.month-row { cursor: pointer; }
+tr.month-row:hover td { background: #f4f7f4; }
+tr.month-detail td { background: #f4f7f4; font-size: .92rem; }
+.savings-strip { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+@media (max-width: 900px) {
+  .week-grid { grid-template-columns: repeat(7, 1fr); }
+  .challenge-flex { flex-direction: column; }
+}
+
 /* ---- print: only the monthly summary ---- */
 @media print {
   .topbar, .foot, .btn, .month-switch, #tx-dialog, #goal-dialog, #bill-dialog, #rule-dialog, #debt-dialog, #groc-dialog, #member-dialog { display: none !important; }

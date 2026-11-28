@@ -278,6 +278,31 @@ export function samplePantry() {
   ];
 }
 
+export function sampleChallenges() {
+  // 52-week challenge: weeks 1–20 already paid on the growing plan
+  // ($1 + $2 + … + $20 = $210 saved). November has 6 no-spend days
+  // marked, and the round-up pot holds $48.60 swept from October.
+  return {
+    fiftyTwo: { mode: 'grow', paid: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
+    noSpend: { '2026-11': [3, 5, 9, 12, 15, 19] },
+    roundUp: { pot: 48.60, swept: ['2026-10'] },
+  };
+}
+
+// Fill v5 fields into an older saved state so v1–v4 saves keep working.
+// v5 adds the savings challenges; the version bump records that the save
+// has been seen by v5 code.
+export function ensureV5(state) {
+  if (!state) return sampleState();
+  ensureV4(state);
+  if (!state.challenges || !state.challenges.fiftyTwo) state.challenges = sampleChallenges();
+  if (!Array.isArray(state.challenges.fiftyTwo.paid)) state.challenges.fiftyTwo.paid = [];
+  if (!state.challenges.noSpend) state.challenges.noSpend = {};
+  if (!state.challenges.roundUp) state.challenges.roundUp = { pot: 0, swept: [] };
+  state.version = 5;
+  return state;
+}
+
 // Fill v4 fields into an older saved state so v1–v3 saves keep working.
 // v4 adds nothing to the stored shape — members are the allowances v2
 // already saved, and transactions gained an optional "who" tag — but the
@@ -320,7 +345,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 4,
+    version: 5,
     sample: true,
     currentMonth: '2026-11',
     budgets,
@@ -336,6 +361,7 @@ export function sampleState() {
     debts: sampleDebts(),
     payoffExtra: 50,
     grocery: { offset: 0, list: sampleGroceryList(), pantry: samplePantry(), overrides: {} },
+    challenges: sampleChallenges(),
   };
 }
 
@@ -345,7 +371,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV4(parsed);
+    return ensureV5(parsed);
   } catch {
     return sampleState();
   }

@@ -48,10 +48,23 @@ account, no server, nothing leaves your browser. Built for the make.fun
   $100 contributions; add, edit and delete goals. Every goal shows its
   next milestone (25 / 50 / 75 / 100%) and roughly how many months at
   $100 a month stand between you and it.
+- **Savings challenges** — three challenges that turn small change into real
+  savings, all tied to the household's own figures: the **52-week
+  challenge** (growing $1→$52, reverse $52→$1, or flat $10 a week — $1,378
+  or $520 by week 52; press any week to mark it paid, with a progress ring
+  and a "Pay week N" button), **no-spend days** (mark the days you spent
+  nothing on a month calendar — streak, days kept and roughly what they were
+  worth, from the household's own daily variable spending), and the
+  **round-up pot** (every expense rounded up to the next whole dollar,
+  listed purchase by purchase; sweep once a month into the pot, then move
+  the pot into the emergency-fund goal with one press — never twice in a
+  month). The Dashboard shows all three at a glance.
 - **Annual overview** — the whole year in one place: 12-month income vs
   spending bars, year-to-date totals and savings rate, best and worst months,
   biggest categories of the year, and a plan for next year (including the
-  three-months-of-spending emergency-fund target).
+  three-months-of-spending emergency-fund target). Press any month in the
+  table to open its drill-down — top categories and biggest single spends
+  for that month.
 - **Insights** — six-month income-vs-spending trend chart, biggest spending
   categories, a six-month savings-rate chart against the 20% rule of
   thumb, month-over-month comparison and plain-language tips written
@@ -78,7 +91,8 @@ account, no server, nothing leaves your browser. Built for the make.fun
   recurring rules, allowances, bill calendar), `annual.js` (year overview), `reports.js`
   (printable summary, debt-payoff planner), `grocery.js` (meal plan,
   grocery list, pantry), `members.js` (household members — one page per
-  person, allowance history, tagged spending). `favicon.ico` is a hand-drawn
+  person, allowance history, tagged spending), `savings.js` (savings
+  challenges — 52-week, no-spend days, round-up pot). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -106,9 +120,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard (desktop, 1280×800)
-- `screenshots/2-members.png` — Household members: four people, allowances, sparklines (desktop, 1280×800)
-- `screenshots/3-bills.png` — Bills & recurring, with the bill calendar (desktop, 1280×800)
-- `screenshots/4-member-phone.png` — Sofia's page: allowance vs spending, history, her transactions (phone, 390×844)
+- `screenshots/2-savings.png` — Savings challenges: 52-week grid, no-spend calendar, round-up pot (desktop, 1280×800)
+- `screenshots/3-annual.png` — Annual overview, with a month drill-down open (desktop, 1280×800)
+- `screenshots/4-savings-phone.png` — Savings challenges on a phone (390×844)
 
 ## License
 

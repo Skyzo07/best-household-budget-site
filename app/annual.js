@@ -58,7 +58,7 @@ export function renderAnnual(state, root) {
 
   const tableRows = rows.map((r) => {
     const mark = r.key === best.key ? ' <span class="pill">best month</span>' : r.key === worst.key ? ' <span class="pill warn">tightest month</span>' : '';
-    return '<tr><td><b>' + esc(r.label) + '</b>' + mark + '</td><td class="amount"><span class="pos">' + money(r.income) + '</span></td>'
+    return '<tr class="month-row" data-annual-month="' + r.key + '" title="Press to see this month’s breakdown"><td><b>' + esc(r.label) + '</b>' + mark + ' <span class="muted small">▸ detail</span></td><td class="amount"><span class="pos">' + money(r.income) + '</span></td>'
       + '<td class="amount"><span class="neg">' + money(r.expense) + '</span></td>'
       + '<td class="amount"><b>' + money(r.saved) + '</b></td></tr>';
   }).join('');
@@ -74,7 +74,7 @@ export function renderAnnual(state, root) {
     + '</div>'
     + '<div class="card" style="margin-top:16px"><h2>Income vs spending — every month of ' + year + '</h2><div class="chart-wrap"><canvas id="chart-annual" class="chart" height="280"></canvas></div>'
     + '<p class="muted small">Green bars are income, gold bars are spending, the red line is what stayed saved. ' + esc(monthLabel(biggestSpendMonth.key)) + ' was the biggest-spending month at ' + money(biggestSpendMonth.expense) + '.</p></div>'
-    + '<div class="grid two" style="margin-top:16px"><div class="card"><h2>Month by month</h2><table><thead><tr><th>Month</th><th class="amount">Income</th><th class="amount">Spent</th><th class="amount">Saved</th></tr></thead><tbody>'
+    + '<div class="grid two" style="margin-top:16px"><div class="card"><h2>Month by month</h2><p class="muted small" style="margin-top:0">Press any month to open its breakdown — top categories and biggest transactions.</p><table><thead><tr><th>Month</th><th class="amount">Income</th><th class="amount">Spent</th><th class="amount">Saved</th></tr></thead><tbody>'
     + tableRows
     + '<tr><td><b>Total</b></td><td class="amount"><b>' + money(totIncome) + '</b></td><td class="amount"><b>' + money(totExpense) + '</b></td><td class="amount"><b>' + money(totSaved) + '</b></td></tr>'
     + '</tbody></table></div>'
@@ -87,4 +87,26 @@ export function renderAnnual(state, root) {
   drawTrend(root.querySelector('#chart-annual'), points);
   const catCanvas = root.querySelector('#chart-annual-cats');
   if (catCanvas) drawBars(catCanvas, topCats, { valueLabel: (v) => money0(v) });
+  // Month drill-down: press a row to open (or close) that month's detail.
+  if (!root.dataset.annualBound) {
+    root.dataset.annualBound = '1';
+    root.addEventListener('click', (e) => {
+      const row = e.target.closest('[data-annual-month]');
+      if (!row) return;
+      const next = row.nextElementSibling;
+      if (next && next.classList.contains('month-detail')) { next.remove(); return; }
+      const k = row.dataset.annualMonth;
+      const spend = categorySpend(state, k);
+      const topSpend = Object.entries(spend).sort((a, b) => b[1] - a[1]).slice(0, 3);
+      const txs = state.transactions.filter((t) => t.date.slice(0, 7) === k && t.kind === 'expense')
+        .sort((a, b) => b.amount - a.amount).slice(0, 3);
+      const detail = document.createElement('tr');
+      detail.className = 'month-detail';
+      detail.innerHTML = '<td colspan="4"><b>' + esc(monthLabel(k)) + ' — where it went:</b> '
+        + (topSpend.length ? topSpend.map(([id, v]) => esc(categoryById(id).label) + ' ' + money(v)).join(' · ') : 'No spending recorded.')
+        + (txs.length ? '<br><span class="muted">Biggest single spends: ' + txs.map((t) => esc(t.description) + ' (' + money(t.amount) + ')').join(' · ') + '</span>' : '')
+        + '</td>';
+      row.after(detail);
+    });
+  }
 }

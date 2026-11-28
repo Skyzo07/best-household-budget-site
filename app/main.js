@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'annual', 'insights', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'annual', 'insights', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -43,6 +43,7 @@ async function showView(route) {
   if (route === 'grocery') (await import('./grocery.js')).renderGrocery(state, root);
   if (route === 'members') (await import('./members.js')).renderMembers(state, root, currentMemberId());
   if (route === 'annual') (await import('./annual.js')).renderAnnual(state, root);
+  if (route === 'savings') (await import('./savings.js')).renderSavings(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   window.scrollTo(0, 0);
 }
@@ -454,6 +455,50 @@ app.addEventListener('click', async (e) => {
       persist();
       rerender();
     }
+    return;
+  }
+  // ---- Savings challenges (loaded on demand) ----
+  const savings = await import('./savings.js');
+  const chWeekBtn = t.closest('[data-ch-week]');
+  if (chWeekBtn) {
+    savings.toggleWeek(state, Number(chWeekBtn.dataset.chWeek));
+    persist();
+    rerender();
+    return;
+  }
+  if (t.closest('[data-ch-pay-next]')) {
+    const next = savings.nextUnpaidWeek(state);
+    if (next) { savings.toggleWeek(state, next); persist(); rerender(); }
+    return;
+  }
+  const modeBtn = t.closest('[data-ch-mode]');
+  if (modeBtn) {
+    savings.setChallengeMode(state, modeBtn.dataset.chMode);
+    persist();
+    rerender();
+    return;
+  }
+  const noSpendBtn = t.closest('[data-nospend-day]');
+  if (noSpendBtn) {
+    savings.toggleNoSpend(state, state.currentMonth, Number(noSpendBtn.dataset.nospendDay));
+    persist();
+    rerender();
+    return;
+  }
+  if (t.closest('[data-roundup-sweep]')) {
+    const swept = savings.sweepRoundUp(state, state.currentMonth);
+    persist();
+    rerender();
+    if (swept > 0) window.alert('Swept ' + money(swept) + ' of round-ups into the pot.');
+    else window.alert('Nothing to sweep — this month is already swept, or has no round-ups.');
+    return;
+  }
+  if (t.closest('[data-pot-to-goal]')) {
+    const moved = savings.movePotToGoal(state);
+    persist();
+    rerender();
+    if (moved > 0) window.alert('Moved ' + money(moved) + ' from the pot into the emergency fund goal.');
+    else window.alert('The pot is empty — sweep this month’s round-ups first.');
     return;
   }
   // ---- Bills & recurring (loaded on demand) ----
