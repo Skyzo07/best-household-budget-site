@@ -600,6 +600,27 @@ export function houseRulesStore(state) {
   return state.houseRules;
 }
 
+// Fill v20 fields into an older saved state so v1–v19 saves keep working.
+// v20 adds the household's usual grocery shop (SuperMart until the
+// household picks another one on the Where we shop page). The version
+// bump records that the save has been seen by v20 code.
+export function ensureV20(state) {
+  if (!state) return sampleState();
+  ensureV19(state);
+  storesPrefStore(state);
+  state.version = 20;
+  return state;
+}
+
+// The household's usual grocery shop (v20): where the weekly shop
+// goes unless a transaction's note says otherwise. The Where we shop
+// page measures its switch estimate against whatever is picked here.
+export function storesPrefStore(state) {
+  if (!state.storesPref || typeof state.storesPref !== 'object') state.storesPref = { preferred: 'supermart' };
+  if (!['supermart', 'market-hall', 'bakery', 'fish-market'].includes(state.storesPref.preferred)) state.storesPref.preferred = 'supermart';
+  return state.storesPref;
+}
+
 // Fill v19 fields into an older saved state so v1–v18 saves keep working.
 // v19 adds the house rules (empty = no rules yet, the page falls back
 // to the seven sample rules). The version bump records that the save
@@ -681,7 +702,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 19,
+    version: 20,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -712,6 +733,10 @@ export function sampleState() {
     // the budgets and envelope fills it wrote, and what they were
     // before, so Undo puts it all back. Null until a plan is adopted.
     nextmonth: null,
+    // Usual grocery shop (v20): SuperMart until the household picks
+    // another one on the Where we shop page — the switch estimate on
+    // that page is measured against whatever is picked here.
+    storesPref: { preferred: 'supermart' },
     // House rules (v19): the seven rules the household agreed — five
     // kept in November, two broken (takeaway over $40 twice, two
     // subscriptions untouched for over 60 days). The verdicts are
@@ -741,7 +766,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV19(parsed);
+    return ensureV20(parsed);
   } catch {
     return sampleState();
   }

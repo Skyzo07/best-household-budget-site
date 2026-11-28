@@ -143,6 +143,21 @@
 // and the unassigned figure move together, both read off the Net
 // worth page's own arithmetic. Verified: /tmp/bhb-v19-verify.mjs,
 // 70/70 checks PASS, 0 JS errors, 0 external requests.
+// v20 adds stores.js (lazy too): where we shop — November's
+// spending grouped by shop or payee from the transactions' own
+// words (the note on the weekly shop, the description otherwise,
+// the category as fallback), per-shop trips, average trip, biggest
+// single spend, last-month comparison and category split, with a
+// show-the-purchases detail, sort by spend / trips / A–Z, a
+// usual-grocery-shop picker, and a grocery switch estimate measured
+// against it from the staple price history ($7.89 a month against
+// SuperMart, $7.00 against Market Hall); plus a Bills "Pay all
+// due" button that marks every bill still unpaid for the month paid
+// in one press after a confirm ($163.00 in November: car + home
+// insurance). First load 6 files, 51,875 bytes gzip-9 (v19: 50,767).
+// Verified: /tmp/bhb-v20-verify.mjs, 78/78 checks PASS, 0 JS errors,
+// 0 external requests; phone scrollWidth 390 on Stores, Bills and
+// Transactions after the table-scroll and calendar shrink fixes.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

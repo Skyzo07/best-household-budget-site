@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -58,6 +58,7 @@ async function showView(route) {
   if (route === 'meeting') (await import('./meeting.js')).renderMeeting(state, root);
   if (route === 'nextmonth') (await import('./nextmonth.js')).renderNextmonth(state, root);
   if (route === 'rules') (await import('./rules.js')).renderRules(state, root);
+  if (route === 'stores') (await import('./stores.js')).renderStores(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -79,6 +80,13 @@ async function renderNextmonthLive() {
 async function renderRulesLive() {
   if (currentRoute() !== 'rules') return;
   (await import('./rules.js')).renderRules(state, $('#view-rules'));
+}
+
+// Re-render just the Where we shop view (used after sorting, expanding
+// a shop, or picking another usual grocery shop).
+async function renderStoresLive() {
+  if (currentRoute() !== 'stores') return;
+  (await import('./stores.js')).renderStores(state, $('#view-stores'));
 }
 
 // Re-render just the Reports view (used while typing in the payoff planner).
@@ -655,6 +663,38 @@ app.addEventListener('click', async (e) => {
       rules.deleteHouseRule(state, r.id);
       persist();
       rerender();
+    }
+    return;
+  }
+  // ---- Where we shop (v20): sort the shops, open a shop's receipts,
+  // pick another usual grocery shop (the select itself is handled in
+  // the change listener below). ----
+  const storeSortBtn = t.closest('[data-store-sort]');
+  if (storeSortBtn) {
+    const stores = await import('./stores.js');
+    stores.setStoreSort(storeSortBtn.dataset.storeSort);
+    renderStoresLive();
+    return;
+  }
+  const storeDetailBtn = t.closest('[data-store-detail]');
+  if (storeDetailBtn) {
+    const stores = await import('./stores.js');
+    stores.toggleStoreDetail(storeDetailBtn.dataset.storeDetail);
+    renderStoresLive();
+    return;
+  }
+  // ---- Bills: pay all due (v20) — one press, one confirm, every
+  // bill still unpaid for the month is marked paid. ----
+  if (t.id === 'btn-pay-all-bills') {
+    const bills = await import('./bills.js');
+    const unpaid = bills.billsForMonth(state, state.currentMonth).filter((b) => !b.paid);
+    if (!unpaid.length) { window.alert('Nothing left to pay — every bill for ' + monthLabel(state.currentMonth) + ' is already paid.'); return; }
+    const total = unpaid.reduce((a, b) => a + b.amount, 0);
+    if (window.confirm('Mark all ' + unpaid.length + ' unpaid bills paid for ' + monthLabel(state.currentMonth) + ' — ' + money(total) + ' in total (' + unpaid.map((b) => b.name + ' ' + money(b.amount)).join(', ') + ')?')) {
+      const paid = bills.payAllDueBills(state, state.currentMonth);
+      persist();
+      rerender();
+      window.alert('Paid ' + paid.length + ' bill' + (paid.length === 1 ? '' : 's') + ' — ' + money(total) + ' in total. Every bill for ' + monthLabel(state.currentMonth) + ' is now paid.');
     }
     return;
   }
@@ -1332,6 +1372,15 @@ app.addEventListener('input', (e) => {
   }
 });
 app.addEventListener('change', (e) => {
+  if (e.target.id === 'store-pref') {
+    import('./stores.js').then((s) => {
+      if (s.setPreferredStore(state, e.target.value)) {
+        persist();
+        renderStoresLive();
+      }
+    });
+    return;
+  }
   if (e.target.id === 'mt-next-date') {
     const v = e.target.value;
     if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {

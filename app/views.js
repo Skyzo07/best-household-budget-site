@@ -258,13 +258,13 @@ export function renderTransactions(state, root, filter) {
     + '<select id="f-kind" aria-label="Filter by type"><option value="all"' + (f.kind === 'all' ? ' selected' : '') + '>Income + expenses</option><option value="income"' + (f.kind === 'income' ? ' selected' : '') + '>Income only</option><option value="expense"' + (f.kind === 'expense' ? ' selected' : '') + '>Expenses only</option></select>'
     + '<select id="f-who" aria-label="Filter by household member">' + whoOptions + '</select></div>'
     + '<p class="muted small" style="margin:8px 0 0">Filtered: <b>' + list.length + ' transaction' + (list.length === 1 ? '' : 's') + '</b> · income ' + money(fIncome) + ' · spent ' + money(fExpense) + (f.who === '' ? ' · household (shared) spending — nobody’s pocket money' : (f.who && f.who !== 'all' ? ' · ' + esc((state.allowances || []).find((a) => a.id === f.who)?.who || '') + '’s spending this month' : '')) + '</p>'
-    + (list.length ? '<table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="hide-m">Note</th><th class="amount">Amount</th><th></th></tr></thead><tbody>'
+    + (list.length ? '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="hide-m">Note</th><th class="amount">Amount</th><th></th></tr></thead><tbody>'
       + list.map((tx) => {
           const cat = categoryById(tx.category);
           return '<tr><td class="num">' + fmtDate(tx.date) + '</td><td><b>' + esc(tx.description) + '</b></td><td><span class="cat-dot" style="background:' + cat.color + '"></span>' + esc(cat.label) + '</td><td class="hide-m muted">' + esc(tx.note || '—') + '</td>'
             + '<td class="amount"><span class="' + (tx.kind === 'income' ? 'pos' : 'neg') + '">' + (tx.kind === 'income' ? '+' : '−') + money(tx.amount) + '</span></td>'
             + '<td><button class="icon-btn" data-edit="' + tx.id + '">Edit</button> <button class="icon-btn" data-del="' + tx.id + '">Delete</button></td></tr>';
-        }).join('') + '</tbody></table>'
+        }).join('') + '</tbody></table></div>'
       : '<p class="empty">No transactions match. Try clearing the search, or add the first one for this month.</p>')
     + '</div>';
 }

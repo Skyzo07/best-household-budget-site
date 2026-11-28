@@ -359,3 +359,16 @@ that actually fixes it. */
 .rule-top h3 { flex: 1; min-width: 0; }
 .rule-evidence { margin: .5em 0; }
 .rule-fix { font-size: .92rem; }
+
+/* v20 — where we shop. The expanded purchase list sits inside its
+shop card with a top margin so it never touches the buttons above
+it; its rows wrap on a phone like every other tx-list. */
+.store-txs { margin-top: 12px; }
+.store-txs .tx-main b { overflow-wrap: anywhere; }
+
+/* v20 — bill calendar on a phone. Seven columns of 1fr still stretch
+past 390px when a chip's text sets the column's minimum width, so
+the cells and heads may shrink below their content and the chips
+wrap inside them instead of pushing the page wide. */
+.cal-cell, .cal-head { min-width: 0; }
+.cal-chip { min-width: 0; overflow-wrap: anywhere; text-align: left; }

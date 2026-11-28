@@ -55,6 +55,23 @@ export function toggleBillPaid(state, billId, key) {
   state.sample = false;
 }
 
+// ---- Pay all due (v20): one press, one confirm, every bill still
+// unpaid for the month is marked paid. It only touches this month —
+// a bill already paid stays paid, and next month starts unpaid
+// again, so the same press can never pay a bill twice. Returns the
+// bills it marked, so the caller can say exactly what it did.
+export function payAllDueBills(state, key) {
+  const unpaid = billsForMonth(state, key).filter((b) => !b.paid);
+  for (const b of unpaid) {
+    const bill = (state.bills || []).find((x) => x.id === b.id);
+    if (!bill) continue;
+    bill.paidMonths = Array.isArray(bill.paidMonths) ? bill.paidMonths.slice() : [];
+    if (!bill.paidMonths.includes(key)) bill.paidMonths.push(key);
+  }
+  if (unpaid.length) state.sample = false;
+  return unpaid;
+}
+
 // ---- Auto-pay (v16): the switch that says a bill pays itself. ----
 // A bill on auto-pay is one the household set up with the bank, so the
 // money leaves on its due day without anyone remembering it. The
@@ -281,8 +298,12 @@ export function renderBills(state, root) {
     + billCalendar(state, key)
     + billYearGrid(state, key)
     + '<div class="card" style="margin-top:16px"><h2>Bills due in ' + monthLabel(key) + '</h2>'
-    + (bills.length ? '<table><thead><tr><th>Bill</th><th>Due</th><th class="amount">Amount</th><th>Status</th><th>Auto-pay</th><th></th></tr></thead><tbody>' + billRows + '</tbody></table>'
+    + (bills.length ? '<div class="table-scroll"><table><thead><tr><th>Bill</th><th>Due</th><th class="amount">Amount</th><th>Status</th><th>Auto-pay</th><th></th></tr></thead><tbody>' + billRows + '</tbody></table></div>'
       : '<p class="empty">No bills yet — add the first one above.</p>')
+    + '<p style="margin-top:12px">' + (totals.unpaid > 0
+      ? '<button class="btn primary" id="btn-pay-all-bills">Pay all due — ' + money(totals.unpaid) + ' (' + (totals.count - totals.paidCount) + ' bill' + ((totals.count - totals.paidCount) === 1 ? '' : 's') + ')</button> '
+      : '<button class="btn primary" id="btn-pay-all-bills" disabled>Pay all due — nothing left to pay</button> ')
+    + '<span class="muted small">One press, one confirm, and every bill still unpaid for ' + monthLabel(key) + ' is marked paid' + (totals.unpaid > 0 ? ' — ' + bills.filter((b) => !b.paid).map((b) => esc(b.name) + ' (' + money(b.amount) + ')').join(', ') + ' are the ones left.' : ' — everything is already paid.') + '</span></p>'
     + '<p class="muted small">Auto-pay is on for ' + autoPayBills.length + ' of ' + bills.length + ' bills — ' + money(autoPayCovered) + ' of the ' + money(totals.due) + ' due this month leaves on its own. ' + (nextAuto ? 'Next auto-pay: ' + esc(nextAuto.b.name) + ' — ' + money(nextAuto.b.amount) + ' on ' + fmtDate(nextAuto.date) + '.' : 'No auto-pay is set up — switch a bill on and its next date shows under the switch.') + ' A bill on auto-pay still needs its paid toggle pressed when the money lands, so the records stay honest.</p>'
     + '<p class="muted small">Tip: pay the big fixed bills (rent, insurance) the day payday lands, and keep the due dates spread across the month so one week never carries everything.</p></div>'
     + '<div class="grid two" style="margin-top:16px"><div class="card"><h2>Recurring rules</h2><p class="muted small">A rule posts one real transaction into the current month — once per month, never twice. Pause a rule instead of deleting it when a subscription is on hold.</p>'

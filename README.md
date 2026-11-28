@@ -187,6 +187,37 @@ account, no server, nothing leaves your browser. Built for the make.fun
   ($118.00 in November); a rule with no name, no number, or a save
   rate over 100% is refused with the reason on screen. Delete takes a
   rule off the board.
+- **Where we shop (v20)** — every dollar of the month grouped by the
+  shop or payee it went to, read off the transactions themselves, so
+  the figures always agree with the Transactions page. November's
+  $3,058.49 of spending lands at **17 shops and payees**: the landlord
+  Maple Court Lettings is biggest ($1,450.00 of rent, one payment),
+  then the shops — **SuperMart $476.60 across 3 trips** (the weekly
+  shops of $186.30, $168.90 and $121.40), Market Hall $142.75 (the one
+  market trip), The Family Table $46.80, Corner Café $52.25, Pizza
+  Corner $38.50, Riverside Cinema $64.00, Toybox $54.00, Petro Stop
+  $96.00, City Transit $38.00, High Street Outfitters $89.99,
+  Riverside School $185.00, School Canteen $24.50, HealthPoint
+  Pharmacy $74.50, Snip & Clip Barbers $35.00, City Power $132.40 and
+  City Water $58.20. Every shop card shows its trips, its average
+  trip, its share of the month, its biggest single spend, what it cost
+  last month (SuperMart is down $213.45 on October's $690.05) and its
+  category split — and **Show the purchases** opens the month's
+  receipts there, one by one. Sort by most spent, most trips or A–Z.
+  Then the grocery switch: the eight staples with the shop that has
+  each one cheapest (milk, chicken and cheddar at Market Hall, salmon
+  at the Fish Market, bread at Bakery Corner, eggs, beef mince and
+  butter at SuperMart) and what moving the staples away from the
+  household's usual shop is roughly worth — **$7.89 a month** against
+  SuperMart, the same rough 4% rate the Groceries page measures, with
+  the page saying plainly that it is an estimate. Pick another usual
+  shop (Market Hall, Bakery Corner or the Fish Market) and the
+  estimate re-measures at once — against Market Hall it is $7.00 a
+  month. "Add at $…" puts any staple on the grocery list at this
+  month's price, the same button the Groceries page uses. The shop
+  for a transaction comes from its own words — the note on the weekly
+  shop, the description otherwise — so edit a description on the
+  Transactions page and the shop moves.
 - **Monthly money meeting (v17)** — once a month, around the table. The
   page builds the agenda itself from the household's own records: six
   wins (11 of 11 months inside the $3,800.00 plan, net worth positive
@@ -278,7 +309,12 @@ account, no server, nothing leaves your browser. Built for the make.fun
   the paid toggle still marks the payment when it lands, so the records
   stay honest.
   Pocket-money allowances per person, with spending counted from their own
-  tagged transactions. A bill calendar lays the whole month out as a grid,
+  tagged transactions. **Pay all due (v20):** one press, one confirm, and
+  every bill still unpaid for the month is marked paid — in November
+  that is the car insurance $95.00 and the home insurance $68.00,
+  $163.00 between them, taking the month to 10 of 10 bills paid; a
+  second press finds nothing left and says so, and the button disables
+  itself once everything is paid. A bill calendar lays the whole month out as a grid,
   one pressable chip per bill on its due day — press a chip to mark that
   bill paid. **Year at a glance:** a twelve-month grid under the calendar —
   green is every bill paid, gold still has money to pay, grey is not
@@ -484,7 +520,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   they were before, so Undo can put them back), defaulted for older saves.
   v19 adds the house rules (seven sample rules: payday saving, two
   spending caps, no-spend days, takeaway limit, save rate, unused
-  subscriptions), defaulted for older saves.
+  subscriptions), defaulted for older saves. v20 adds the household's
+  usual grocery shop (SuperMart until the household picks another one
+  on the Where we shop page), defaulted for older saves.
 
 ## Tech
 
@@ -492,7 +530,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The nineteen newer sections are one-job
+  (routing, dialogs, CRUD, export). The twenty newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -542,7 +580,13 @@ account, no server, nothing leaves your browser. Built for the make.fun
   seven rules the household agreed, each checked live against the
   month's own records: payday auto-save runs, category caps, no-spend
   days, a per-meal takeaway limit, the save rate, subscriptions
-  untouched for 60 days; add-rule form and delete).
+  untouched for 60 days; add-rule form and delete), `stores.js` (where
+  we shop — the month's spending grouped by shop or payee from the
+  transactions' own words, per-shop trips, averages, biggest spend,
+  last-month comparison and category split, show-the-purchases detail,
+  sort by spend / trips / A–Z, the usual-grocery-shop picker, and the
+  grocery switch estimate measured against it from the staple price
+  history).
   `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
@@ -574,9 +618,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-rules.png` — House rules: 5 of 7 kept in November 2026, the two broken rules costing $39.03 a month, every verdict carrying its exact figure (desktop, 1280×800)
-- `screenshots/3-goals.png` — Savings goals: $21,225.35 of unassigned cash on top, the three goals with their rings and milestones below (desktop, 1280×800)
-- `screenshots/4-insights-phone.png` — Insights on a phone (390×844), six-month trend and category drill-down, no horizontal overflow
+- `screenshots/2-stores.png` — Where we shop: November's $3,058.49 across 17 shops and payees, SuperMart biggest shop at $476.60, the $7.89-a-month switch estimate against SuperMart (desktop, 1280×800)
+- `screenshots/3-bills.png` — Bills & recurring: the bill calendar, the year-at-a-glance grid, and Pay all due — $163.00 for the car and home insurance still unpaid in November (desktop, 1280×800)
+- `screenshots/4-transactions-phone.png` — Transactions on a phone (390×844), filters and the month's spending, no horizontal overflow
 
 ## License
 
