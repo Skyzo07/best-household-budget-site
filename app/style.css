@@ -230,9 +230,25 @@ tr.month-row { cursor: pointer; }
 tr.month-row:hover td { background: #f4f7f4; }
 tr.month-detail td { background: #f4f7f4; font-size: .92rem; }
 .savings-strip { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+/* ---- cash envelopes (v6) ---- */
+.env-grid { grid-template-columns: repeat(3, 1fr); }
+.env-card h3 { margin: 0; }
+.env-top { display: flex; align-items: center; gap: 10px; }
+.env-head { flex: 1; min-width: 0; }
+.env-head .muted { display: block; }
+.env-figures { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 12px 0 8px; }
+.env-figures .inline-label input { width: 104px; text-align: right; }
+.env-roll { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.env-detail { border-top: 1px solid #edf1ed; margin-top: 12px; padding-top: 10px; }
+.move-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.move-row select { display: inline-block; width: auto; font: inherit; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 @media (max-width: 900px) {
+  .env-grid { grid-template-columns: 1fr 1fr; }
   .week-grid { grid-template-columns: repeat(7, 1fr); }
   .challenge-flex { flex-direction: column; }
+}
+@media (max-width: 560px) {
+  .env-grid { grid-template-columns: 1fr; }
 }
 
 /* ---- print: only the monthly summary ---- */

@@ -18,6 +18,21 @@ export const DINNERS = [
 ];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Staple prices the household actually paid, September → November 2026.
+// The November price is the one on the grocery list above, so the table
+// and the list always agree. "Cheapest" names the store that had the
+// lowest November price for that staple.
+export const PRICE_HISTORY = [
+  { name: 'Milk 3 L', sep: 4.80, oct: 4.95, nov: 5.10, store: 'Market Hall' },
+  { name: 'Eggs — dozen', sep: 5.90, oct: 6.20, nov: 6.50, store: 'SuperMart' },
+  { name: 'Bread loaf', sep: 2.70, oct: 2.80, nov: 2.90, store: 'Bakery Corner' },
+  { name: 'Whole chicken 1.6 kg', sep: 12.90, oct: 13.20, nov: 13.60, store: 'Market Hall' },
+  { name: 'Beef mince 500 g', sep: 8.40, oct: 8.60, nov: 8.90, store: 'SuperMart' },
+  { name: 'Cheddar block 400 g', sep: 6.40, oct: 6.55, nov: 6.75, store: 'Market Hall' },
+  { name: 'Butter 250 g', sep: 4.60, oct: 4.75, nov: 4.90, store: 'SuperMart' },
+  { name: 'Salmon fillets 400 g', sep: 16.40, oct: 16.80, nov: 17.20, store: 'Fish Market' },
+];
+
 export function weekStart(offset) {
   const d = new Date(2026, 10, 16 + offset * 7);
   return d;
@@ -92,6 +107,21 @@ export function pantryAdd(state, pantryId) {
   return item;
 }
 
+// "Add at the November price": put a staple from the price-history
+// table onto the grocery list at what it costs this month. Already on
+// the list (and not yet bought) means nothing to add — returns null.
+export function addPriceItem(state, name) {
+  const staple = PRICE_HISTORY.find((p) => p.name === name);
+  if (!staple) return null;
+  if (!state.grocery) state.grocery = { offset: 0, list: [], pantry: [], overrides: {} };
+  const list = state.grocery.list;
+  if (list.some((i) => i.name === staple.name && !i.checked)) return null;
+  const item = { id: uid('groc'), name: staple.name, qty: 1, price: staple.nov, checked: false, pantryId: '' };
+  list.push(item);
+  state.sample = false;
+  return item;
+}
+
 export function renderGrocery(state, root) {
   const key = state.currentMonth;
   const grocery = state.grocery || { offset: 0, list: [], pantry: [], overrides: {} };
@@ -125,6 +155,25 @@ export function renderGrocery(state, root) {
       + '<td class="amount">$<input type="number" min="0" step="0.10" value="' + m.cost.toFixed(2) + '" data-meal-cost="' + m.index + '" aria-label="Cost of dinner for ' + m.day + '"></td></tr>';
   }).join('');
 
+  const priceRows = PRICE_HISTORY.map((p) => {
+    const change = ((p.nov - p.sep) / p.sep) * 100;
+    const cheapest = Math.min(p.sep, p.oct, p.nov);
+    const cell = (v) => '<td class="amount"' + (v === cheapest ? ' style="color:#1d6b4f;font-weight:700"' : '') + '>' + money(v) + '</td>';
+    const onList = (grocery.list || []).some((i) => i.name === p.name && !i.checked);
+    return '<tr><td><b>' + esc(p.name) + '</b></td>' + cell(p.sep) + cell(p.oct) + cell(p.nov)
+      + '<td class="amount"><span class="' + (change > 8 ? 'neg' : 'pos') + '">+' + change.toFixed(1) + '%</span></td>'
+      + '<td>' + esc(p.store) + '</td>'
+      + '<td><button class="icon-btn" data-price-add="' + esc(p.name) + '"' + (onList ? ' disabled' : '') + '>' + (onList ? 'On the list ✓' : 'Add at ' + money(p.nov)) + '</button></td></tr>';
+  }).join('');
+  const basketSep = PRICE_HISTORY.reduce((a, p) => a + p.sep, 0);
+  const basketNov = PRICE_HISTORY.reduce((a, p) => a + p.nov, 0);
+  const basketUp = basketNov - basketSep;
+  const basketPct = (basketUp / basketSep) * 100;
+  const priceCard = '<div class="card" style="margin-top:16px"><h2>Staple prices — what things actually cost</h2>'
+    + '<p class="muted small" style="margin-top:0">The eight staples this household buys every week, priced September → November 2026. The November price is the one on the grocery list above — the table and the list always agree. The cheapest month for each staple is in green; “Add at $…” puts it on the list at this month’s price.</p>'
+    + '<table><thead><tr><th>Staple</th><th class="amount">Sep</th><th class="amount">Oct</th><th class="amount">Nov</th><th class="amount">Since Sep</th><th>Cheapest store</th><th></th></tr></thead><tbody>' + priceRows + '</tbody></table>'
+    + '<p class="muted small">The whole basket of eight costs <b>' + money(basketNov) + '</b> in November, against ' + money(basketSep) + ' in September — up ' + money(basketUp) + ' (' + basketPct.toFixed(1) + '%) in two months. Eggs climbed fastest (+10.2%); salmon the least (+4.9%). Shopping the cheapest store per staple instead of one store for everything saves roughly ' + money(Math.round(basketNov * 0.04 * 100) / 100) + ' a week on this basket alone.</p></div>';
+
   root.innerHTML =
     '<div class="page-head"><div><h1>Groceries &amp; meals</h1><p class="muted">One weekly plan, one priced list, one shop. Plan the dinners, tick the list off in the store, then press “Buy this list” and the shop lands in Transactions as one real grocery expense.</p></div>'
     + '<div><button class="btn primary" id="btn-add-groc">+ Add grocery item</button> <button class="btn ghost" id="btn-buy-list"' + (t.left === 0 ? ' disabled' : '') + '>Buy this list — ' + money(t.toBuy) + '</button></div></div>'
@@ -147,7 +196,8 @@ export function renderGrocery(state, root) {
     + '<button class="btn small ghost" id="btn-clear-bought">Clear bought items</button></p></div></div>'
     + '<div class="card" style="margin-top:16px"><h2>Pantry staples</h2><p class="muted small" style="margin-top:0">The cupboard, at a glance. “Add to list” puts a restock on the grocery list at its usual price — no re-typing, no forgotten oil.</p>'
     + '<ul class="tx-list">' + pantryRows + '</ul>'
-    + '<p class="muted small">Tip: shop the list once a week instead of topping up daily. Groceries averaged ' + money(groceryAvg3(state, key)) + ' a month over the last three months — one big shop a week, planned from the dinners above, is where the saving hides.</p></div>';
+    + '<p class="muted small">Tip: shop the list once a week instead of topping up daily. Groceries averaged ' + money(groceryAvg3(state, key)) + ' a month over the last three months — one big shop a week, planned from the dinners above, is where the saving hides.</p></div>'
+    + priceCard;
 }
 
 // Small local helpers so the pantry tip never crashes on an empty month.

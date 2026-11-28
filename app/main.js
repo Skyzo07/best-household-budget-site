@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'annual', 'insights', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'annual', 'insights', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'annual', 'insights', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -44,6 +44,7 @@ async function showView(route) {
   if (route === 'members') (await import('./members.js')).renderMembers(state, root, currentMemberId());
   if (route === 'annual') (await import('./annual.js')).renderAnnual(state, root);
   if (route === 'savings') (await import('./savings.js')).renderSavings(state, root);
+  if (route === 'envelopes') (await import('./envelopes.js')).renderEnvelopes(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   window.scrollTo(0, 0);
 }
@@ -90,11 +91,14 @@ function fillWhoSelect(select, selected) {
   const opts = ['<option value="">Household (shared)</option>'].concat((state.allowances || []).map((a) => '<option value="' + a.id + '"' + (a.id === selected ? ' selected' : '') + '>' + a.who + '</option>'));
   select.innerHTML = opts.join('');
 }
+// Set by an "Add spending" button on an envelope card so the dialog
+// opens already tagged to that envelope's first category; cleared on save.
+let pendingCategory = '';
 function openTxDialog(tx) {
   editingTxId = tx ? tx.id : null;
   $('#tx-dialog-title').textContent = tx ? 'Edit transaction' : 'Add transaction';
   $('#tx-error').hidden = true;
-  fillCategorySelect($('#tx-category'), tx ? tx.category : 'groceries');
+  fillCategorySelect($('#tx-category'), tx ? tx.category : (pendingCategory || 'groceries'));
   fillWhoSelect($('#tx-who'), tx ? (tx.who || '') : (pendingWho || ''));
   $('#tx-desc').value = tx ? tx.description : '';
   $('#tx-amount').value = tx ? tx.amount : '';
@@ -121,6 +125,7 @@ txForm.addEventListener('submit', (e) => {
     state.currentMonth = data.date.slice(0, 7);
   }
   pendingWho = '';
+  pendingCategory = '';
   state.sample = false;
   persist();
   txDialog.close();
@@ -501,6 +506,54 @@ app.addEventListener('click', async (e) => {
     else window.alert('The pot is empty — sweep this month’s round-ups first.');
     return;
   }
+  // ---- Cash envelopes (loaded on demand) ----
+  const envelopes = await import('./envelopes.js');
+  const envDetail = t.closest('[data-env-detail]');
+  if (envDetail) {
+    envelopes.toggleEnvDetail(envDetail.dataset.envDetail);
+    rerender();
+    return;
+  }
+  if (t.closest('[data-env-move]')) {
+    const amount = Number($('#env-move-amount').value);
+    const from = $('#env-move-from').value;
+    const to = $('#env-move-to').value;
+    envelopes.tryMoveMoney(state, state.currentMonth, from, to, amount);
+    persist();
+    rerender();
+    return;
+  }
+  if (t.closest('[data-env-reset]')) {
+    if (window.confirm('Reset this month’s envelope fills back to budgets plus rollovers? Your typed fills and transfers for this month go away.')) {
+      envelopes.resetEnvelopesMonth(state, state.currentMonth);
+      persist();
+      rerender();
+    }
+    return;
+  }
+  const envRoll = t.closest('[data-env-roll]');
+  if (envRoll) {
+    envelopes.toggleEnvRollover(state, envRoll.dataset.envRoll);
+    persist();
+    rerender();
+    return;
+  }
+  const envAdd = t.closest('[data-env-add]');
+  if (envAdd) {
+    pendingCategory = envAdd.dataset.envAdd;
+    openTxDialog(null);
+    return;
+  }
+  const priceAdd = t.closest('[data-price-add]');
+  if (priceAdd) {
+    const grocery = await import('./grocery.js');
+    const added = grocery.addPriceItem(state, priceAdd.dataset.priceAdd);
+    persist();
+    rerender();
+    if (added) window.alert('Added to the grocery list: ' + added.name + ' — ' + money(added.price) + ' (November price).');
+    else window.alert('That staple is already on the grocery list — tick it off in the store first.');
+    return;
+  }
   // ---- Bills & recurring (loaded on demand) ----
   const bills = await import('./bills.js');
   const billPaid = t.closest('[data-bill-paid]');
@@ -583,6 +636,15 @@ app.addEventListener('input', (e) => {
       persist();
     }
   }
+  if (t.dataset && t.dataset.envFill) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      import('./envelopes.js').then((env) => {
+        env.setEnvFill(state, state.currentMonth, t.dataset.envFill, v);
+        persist();
+      });
+    }
+  }
   if (t.dataset && t.dataset.allowance) {
     const v = Number(t.value);
     const a = state.allowances.find((x) => x.id === t.dataset.allowance);
@@ -641,6 +703,7 @@ app.addEventListener('input', (e) => {
 });
 app.addEventListener('change', (e) => {
   if (e.target.id === 'f-cat' || e.target.id === 'f-kind') rerender();
+  if (e.target.dataset && e.target.dataset.envFill) { rerender(); return; }
   if (e.target.dataset && e.target.dataset.grocCheck) {
     const item = state.grocery && state.grocery.list.find((x) => x.id === e.target.dataset.grocCheck);
     if (item) {

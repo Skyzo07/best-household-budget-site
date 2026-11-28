@@ -345,7 +345,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 5,
+    version: 6,
     sample: true,
     currentMonth: '2026-11',
     budgets,
@@ -371,7 +371,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV5(parsed);
+    return ensureV6(parsed);
   } catch {
     return sampleState();
   }
@@ -407,4 +407,95 @@ export function lastMonths(key, count) {
   const out = [];
   for (let i = count - 1; i >= 0; i--) out.push(shiftMonth(key, -i));
   return out;
+}
+
+// ---- Cash envelopes (v6) ----
+// Six envelopes, each fed by one or two spending categories. Household
+// covers the small stuff: shopping + other. The fill of an envelope is
+// its categories' budgets plus whatever rolled over unspent from the
+// month before — computed, never stored, so an edited budget or a new
+// transaction moves the envelopes at once.
+export const ENVELOPE_DEFS = [
+  { id: 'groceries', label: 'Groceries', icon: '🛒', color: '#2b5f8a', cats: ['groceries'] },
+  { id: 'dining', label: 'Dining out', icon: '🍽', color: '#b3382e', cats: ['dining'] },
+  { id: 'transport', label: 'Transport', icon: '🚗', color: '#7a5c1e', cats: ['transport'] },
+  { id: 'kids', label: 'Kids & school', icon: '🎒', color: '#3f7d6b', cats: ['kids'] },
+  { id: 'fun', label: 'Fun & family', icon: '🎬', color: '#c25e7a', cats: ['fun'] },
+  { id: 'household', label: 'Household', icon: '🏠', color: '#5d6d64', cats: ['shopping', 'other'] },
+];
+
+export function envelopeStore(state) {
+  if (!state.envelopes) state.envelopes = { fills: {}, rolloverOn: {} };
+  if (!state.envelopes.fills) state.envelopes.fills = {};
+  if (!state.envelopes.rolloverOn) state.envelopes.rolloverOn = {};
+  return state.envelopes;
+}
+
+export function envelopeBaseFill(state, env) {
+  let base = 0;
+  for (const c of env.cats) base += state.budgets[c] || 0;
+  return base;
+}
+
+export function envelopeSpend(state, key, env) {
+  const spend = categorySpend(state, key);
+  let total = 0;
+  for (const c of env.cats) total += spend[c] || 0;
+  return Math.round(total * 100) / 100;
+}
+
+// Unspent cash rolling INTO `key` from the month before: last month's
+// budget for this envelope, minus what last month actually spent (0
+// when the envelope's rollover is switched off, or when last month
+// spent its budget out). Measured against the budget — not the fill —
+// so a good month is rewarded once, and the reward never compounds
+// into an envelope no household would recognise. A hand-raised fill
+// does not inflate the next month: the rollover is the budget's
+// unspent share.
+export function envelopeRollover(state, key, env) {
+  const store = envelopeStore(state);
+  if (store.rolloverOn[env.id] === false) return 0;
+  if (key <= '2025-01') return 0;
+  const prev = shiftMonth(key, -1);
+  const left = envelopeBaseFill(state, env) - envelopeSpend(state, prev, env);
+  return Math.max(0, Math.round(left * 100) / 100);
+}
+
+// The fill for a month: a fill the household set by hand (typed in, or
+// landed on by a transfer) wins; otherwise budget plus rollover.
+export function envelopeFill(state, key, env) {
+  const store = envelopeStore(state);
+  const stored = store.fills[key] && store.fills[key][env.id];
+  if (typeof stored === 'number') return stored;
+  return Math.round((envelopeBaseFill(state, env) + envelopeRollover(state, key, env)) * 100) / 100;
+}
+
+// Everything the envelopes page and the dashboard strip need for a
+// month, plus the preview of next month's opening fills.
+export function envelopeTotals(state, key) {
+  let filled = 0, spent = 0, rolled = 0, nextFilled = 0, nextRolled = 0;
+  const over = [];
+  const nextKey = shiftMonth(key, 1);
+  for (const env of ENVELOPE_DEFS) {
+    const fill = envelopeFill(state, key, env);
+    const paid = envelopeSpend(state, key, env);
+    filled += fill; spent += paid;
+    rolled += envelopeRollover(state, key, env);
+    nextFilled += envelopeFill(state, nextKey, env);
+    nextRolled += envelopeRollover(state, nextKey, env);
+    if (fill - paid <= 0) over.push(env);
+  }
+  const round = (n) => Math.round(n * 100) / 100;
+  return { filled: round(filled), spent: round(spent), left: round(filled - spent), rolled: round(rolled), nextFilled: round(nextFilled), nextRolled: round(nextRolled), over };
+}
+
+// Fill v6 fields into an older saved state so v1–v5 saves keep working.
+// v6 adds the cash envelopes; the version bump records that the save
+// has been seen by v6 code.
+export function ensureV6(state) {
+  if (!state) return sampleState();
+  ensureV5(state);
+  envelopeStore(state);
+  state.version = 6;
+  return state;
 }

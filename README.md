@@ -43,7 +43,26 @@ account, no server, nothing leaves your browser. Built for the make.fun
   grocery list with a running total checked against the weekly grocery
   budget, and pantry staples with one-press “Add to list” restocking.
   Tick items off in the store, then “Buy this list” posts the shop as one
-  real groceries transaction into the current month — never twice.
+  real groceries transaction into the current month — never twice. A
+  **staple price history** tracks eight weekly staples (milk, eggs, bread,
+  chicken, beef mince, cheddar, butter, salmon) across September →
+  November 2026 with the cheapest store for each — the November price is
+  the one on the grocery list, so table and list always agree; “Add at $…”
+  puts any staple on the list at this month’s price. The eight-staple
+  basket costs $65.85 in November, up $3.75 (+6.0%) since September.
+- **Cash envelopes** — the month’s money in six envelopes (Groceries,
+  Dining out, Transport, Kids & school, Fun & family, Household), each
+  filled at payday from the household’s own budgets. Every expense draws
+  its envelope down; last month’s unspent budget **rolls into next month’s
+  fill automatically** — October’s unspent $647.20 is already sitting in
+  November’s envelopes, and December opens with $2,476.61. Fill any
+  envelope by typing a new amount, **move cash between envelopes** (only
+  unspent cash can move, so an envelope can never go below what it spent),
+  switch rollover on or off per envelope, reset a month’s fills to budgets
+  plus rollovers, and press any envelope to see exactly which purchases
+  spent it this month — with “Add spending” opening the transaction form
+  already tagged to that envelope. The Dashboard shows the envelopes at a
+  glance: filled, spent, left, and next month’s opening total.
 - **Savings goals** — goals with progress rings, target dates and one-click
   $100 contributions; add, edit and delete goals. Every goal shows its
   next milestone (25 / 50 / 75 / 100%) and roughly how many months at
@@ -77,22 +96,25 @@ account, no server, nothing leaves your browser. Built for the make.fun
 - **Your data stays yours** — everything is saved in `localStorage` on your
   own device. Sample data for the Hartono family (two incomes, two kids) is
   pre-loaded so every feature works on first open; reset it any time. Older
-  v1/v2/v3 saves are migrated automatically — bills, rules, allowances, debts,
-  grocery list and pantry are added without losing your transactions.
+  v1/v2/v3/v4/v5 saves are migrated automatically — bills, rules, allowances,
+  debts, grocery list, pantry, challenges and now cash envelopes are added
+  without losing your transactions.
 
 ## Tech
 
 - Static files under `app/` — `index.html`, `style.css`, and ES modules
-  split by job: `data.js` (categories, sample data, month maths, storage),
-  `charts.js` (hand-drawn canvas donut / bars / trend), `views.js`
-  (dashboard, transactions, budgets, goals, insights), `main.js` (routing,
-  dialogs, CRUD, export). The five newer sections are one-job files loaded
-  only when opened, so they stay out of the first load: `bills.js` (bills,
-  recurring rules, allowances, bill calendar), `annual.js` (year overview), `reports.js`
-  (printable summary, debt-payoff planner), `grocery.js` (meal plan,
-  grocery list, pantry), `members.js` (household members — one page per
-  person, allowance history, tagged spending), `savings.js` (savings
-  challenges — 52-week, no-spend days, round-up pot). `favicon.ico` is a hand-drawn
+  split by job: `data.js` (categories, sample data, month maths, storage,
+  cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
+  `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
+  (routing, dialogs, CRUD, export). The seven newer sections are one-job
+  files loaded only when opened, so they stay out of the first load:
+  `bills.js` (bills, recurring rules, allowances, bill calendar),
+  `annual.js` (year overview), `reports.js` (printable summary, debt-payoff
+  planner), `grocery.js` (meal plan, grocery list, pantry, staple price
+  history), `members.js` (household members — one page per person, allowance
+  history, tagged spending), `savings.js` (savings challenges — 52-week,
+  no-spend days, round-up pot), `envelopes.js` (cash envelopes — fills,
+  rollovers, transfers, per-envelope spending). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -119,10 +141,10 @@ to the output directory and writes `dossier.json` with the vendored
 
 ## Screenshots
 
-- `screenshots/1-dashboard.png` — Dashboard (desktop, 1280×800)
-- `screenshots/2-savings.png` — Savings challenges: 52-week grid, no-spend calendar, round-up pot (desktop, 1280×800)
-- `screenshots/3-annual.png` — Annual overview, with a month drill-down open (desktop, 1280×800)
-- `screenshots/4-savings-phone.png` — Savings challenges on a phone (390×844)
+- `screenshots/1-dashboard.png` — Dashboard, incl. the new envelopes strip (desktop, 1280×800)
+- `screenshots/2-envelopes.png` — Cash envelopes: six envelopes, move-cash control, December preview (desktop, 1280×800)
+- `screenshots/3-grocery.png` — Groceries & meals, with the staple price-history table (desktop, 1280×800)
+- `screenshots/4-envelopes-phone.png` — Cash envelopes on a phone (390×844)
 
 ## License
 
