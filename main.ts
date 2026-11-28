@@ -180,6 +180,29 @@
 // Verified: /tmp/bhb-v21-verify.mjs, 76/76 checks PASS, 0 JS errors,
 // 0 external requests; phone scrollWidth 390 on Debt-free, Annual,
 // Stores, Bills and Transactions.
+// v22 adds calendar.js (lazy too): a money calendar — the whole month
+// on one page, every payday, bill, auto-save run, debt payment (from
+// the Debt-free calendar's own schedule), big-purchase set-aside,
+// subscription renewal (on the day of the month it was last used),
+// money meeting and no-spend day plotted on the day it lands, with
+// planned money in/out KPIs, a busiest day, kind filters, a month
+// switcher, a day detail that marks bills paid and runs auto-save
+// rules and adds a transaction already dated to the day, that day's
+// real transactions, and weekly planned totals — December 2026:
+// $5,850.00 in, $3,621.37 out, $2,228.63 left on the plan, busiest
+// day Dec 1 at $2,628.43 out; plus a monthly report card on every
+// member's page (Maya: $52.25 of $150.00, all Dining out, $97.75
+// left) and a top-category line on every overview card, and a
+// table-scroll wrap for the member detail's history and transactions
+// tables after the v22 phone check found them stretching 35px past
+// 390px. First load 6 files, 53,292 bytes gzip-9 (v21: 52,544, +748,
+// target ≤ ~66 KB); later by import() 23 files, 126,075 bytes gzip-9
+// (calendar.js 6,838 lazy; members.js +721); whole app 30 files,
+// 623,692 bytes. Verified: /tmp/bhb-v22-verify.mjs, 65/65 checks
+// PASS, 0 JS errors, 0 external requests; phone scrollWidth 390 on
+// Calendar (December), Members (Maya) and Debt-free. One fix during
+// the run: calendar.js first imported autosaveStore from autosave.js,
+// which does not export it — it lives in data.js.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

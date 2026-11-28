@@ -372,3 +372,29 @@ the cells and heads may shrink below their content and the chips
 wrap inside them instead of pushing the page wide. */
 .cal-cell, .cal-head { min-width: 0; }
 .cal-chip { min-width: 0; overflow-wrap: anywhere; text-align: left; }
+
+/* v22 — money calendar. The day cells are the controls: the whole
+cell is pressable, the open day carries a green outline, today a
+gold one. Chips are colour-coded by kind; the small "spent" line is
+what the household actually spent that day. On a phone the cells
+shrink to two chips and the filter buttons wrap. */
+.money-cal .cal-cell { min-height: 92px; cursor: pointer; }
+.money-cal .cal-cell:hover { border-color: var(--green); }
+.money-cal .cal-cell.selected { outline: 2px solid var(--green); outline-offset: 1px; background: var(--green-soft); }
+.money-cal .cal-cell.today { border-color: #d9a441; }
+.money-cal .cal-cell.today .cal-day { color: #6d4a00; }
+.mcal-chip { display: block; border-radius: 6px; padding: 3px 6px; font-size: .72rem; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.mcal-chip.in { background: var(--green-soft); color: var(--green-deep); }
+.mcal-chip.bill { background: #f3dfa9; color: #6d4a00; }
+.mcal-chip.save { background: #dbe7f2; color: #2b5f8a; }
+.mcal-chip.debt { background: var(--red-soft); color: var(--red); }
+.mcal-chip.sub { background: #e8e2f2; color: #6a4a8a; }
+.mcal-chip.meet { background: #d9efe8; color: #1d6b4f; }
+.mcal-chip.nospend { background: #eef1ee; color: #5d6d64; border: 1px dashed #b9c4b9; }
+.mcal-more { font-size: .72rem; color: var(--muted); }
+.mcal-spent { font-size: .72rem; color: var(--muted); margin-top: auto; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+@media (max-width: 560px) {
+  .money-cal .cal-cell { min-height: 76px; padding: 4px; }
+  .mcal-chip { font-size: .66rem; padding: 2px 4px; }
+}

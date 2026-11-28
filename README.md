@@ -218,6 +218,41 @@ account, no server, nothing leaves your browser. Built for the make.fun
   for a transaction comes from its own words — the note on the weekly
   shop, the description otherwise — so edit a description on the
   Transactions page and the shop moves.
+- **Money calendar (v22)** — the whole month on one page, every money
+  event plotted on the day it lands, every figure computed live from
+  the household's own records. **December 2026: $5,850.00 planned in**
+  (payday Dec 1: Maya $4,200.00 + Daniel $1,450.00, market stall Dec 14
+  $200.00) against **$3,621.37 planned out** — the ten bills
+  ($2,249.59, rent Dec 1 to home insurance Dec 25), the month's debt
+  payment ($390.37 on Dec 1, from the Debt-free calendar's own
+  schedule), the auto-save runs ($230.00 on Dec 1, round-ups Dec 31),
+  the big purchases' monthly set-asides ($558.06) and the subscription
+  renewals ($193.35) — **$2,228.63 left over on the plan**, and **Dec 1
+  is the busiest day** ($2,628.43 going out on the one day). Press any
+  day to open it: the meeting on Dec 6, the no-spend days, every
+  subscription renewing on the day of the month it was last used —
+  and the open day's detail does the work, with **Mark paid** on a
+  bill (pay the rent from Dec 1 and the bills still to pay fall from
+  $2,249.59 to $799.59) and **Run now** on an auto-save rule, plus
+  that day's real transactions and an **Add transaction** button
+  already dated to the day. Filter the grid by kind (money in, bills,
+  saving, debt, subscriptions, meeting), step between months, and
+  read the weekly totals underneath — the week starting Nov 29 takes
+  in $5,850.00 and sends out $2,847.97. Two honest conventions are
+  stated on the page: debts have no single due day in the records, so
+  the month's payment is shown on the 1st (the total is exact), and a
+  subscription's renewal day is the day of the month it was last used.
+- **Monthly report per member (v22)** — every member's own page now
+  opens with a report card for the month: what they spent of their
+  allowance, on what, and what is left. **Maya: $52.25 of $150.00
+  across 1 tagged transaction — all of it Dining out** (lunch with
+  friends, $52.25 on Nov 11), **$97.75 left**, nothing banked yet
+  this month. Sofia: $24.50 of $25.00 (school lunch top-up). Liam:
+  $12.00 of $20.00, $8.00 left. The overview cards carry the same
+  headline — each person's top category for the month and its share
+  of what they spent. The member detail's allowance-history and
+  transactions tables now scroll inside their cards on a phone, so
+  the page no longer stretches past 390px.
 - **Debt-free calendar (v21)** — the household's own debts laid out
   month by month, from the next payment to the last, every figure
   computed live — nothing typed in. **$10,100.00 owed** across three
@@ -631,7 +666,14 @@ account, no server, nothing leaves your browser. Built for the make.fun
   one-off extra payment in the first month, per-debt clear months and
   an expandable per-debt split of every payment, all recomputed live
   from the same extra payment and method the Reports payoff planner
-  keeps).
+  keeps), `calendar.js` (money calendar — the whole month on one page,
+  every payday, bill, auto-save run, debt payment, set-aside,
+  subscription renewal, meeting and no-spend day plotted on the day it
+  lands, with a day detail that marks bills paid and runs auto-save
+  rules, kind filters, a month switcher and weekly planned totals).
+  The members' monthly report cards live in `members.js` (top category
+  and biggest spend per person, counted from their own tagged
+  transactions).
   `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
@@ -663,9 +705,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-debtfree.png` — Debt-free calendar: $10,100.00 owed, debt-free March 2030 in 40 months for $1,238.76 of interest, the $546.51 the extra buys, avalanche/snowball switch, extra-a-month box and Pay extra this month (desktop, 1280×800)
-- `screenshots/3-stores.png` — Where we shop: November's $3,058.49 across 17 shops and payees, SuperMart biggest shop at $476.60, the $7.89-a-month switch estimate against SuperMart (desktop, 1280×800)
-- `screenshots/4-annual-phone.png` — Annual overview on a phone (390×844), scrolled to the 2027 projection card — $69,200.04 income, $37,316.04 spending, $31,884.00 saving at 46.1% — no horizontal overflow
+- `screenshots/2-calendar.png` — Money calendar, December 2026: payday Dec 1 ($5,650.00 in), the meeting on Dec 6 open, subscription renewals and bills plotted across the month, kind filters, $5,850.00 planned in against $3,621.37 out (desktop, 1280×800)
+- `screenshots/3-debtfree.png` — Debt-free calendar: $10,100.00 owed, debt-free March 2030 in 40 months for $1,238.76 of interest, the $546.51 the extra buys, avalanche/snowball switch, extra-a-month box and Pay extra this month (desktop, 1280×800)
+- `screenshots/4-members-phone.png` — Maya's page on a phone (390×844), scrolled to her November report card — $52.25 of $150.00, all Dining out, $97.75 left — no horizontal overflow
 
 ## License
 

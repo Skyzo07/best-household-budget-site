@@ -35,6 +35,21 @@ export function memberHistory(state, whoId) {
   });
 }
 
+// What one person spent the most on this month, by category — the
+// "report" line on their card and the headline of their monthly
+// report. Returns null when nothing was tagged to them.
+export function memberTopCategory(state, key, whoId) {
+  const byCat = {};
+  for (const t of monthTransactions(state, key)) {
+    if (t.kind === 'expense' && t.who === whoId) byCat[t.category] = (byCat[t.category] || 0) + t.amount;
+  }
+  let best = null;
+  for (const id of Object.keys(byCat)) {
+    if (!best || byCat[id] > best.amount) best = { id, label: categoryById(id).label, amount: Math.round(byCat[id] * 100) / 100 };
+  }
+  return best;
+}
+
 // Add a new household member with a monthly allowance.
 export function addMember(state, name, role, monthly) {
   const member = { id: uid('member'), who: name, role: role || 'Household member', monthly };
@@ -127,6 +142,7 @@ function memberCard(state, key, a) {
   // Their biggest single spend this month, if any.
   const mine = monthTransactions(state, key).filter((t) => t.kind === 'expense' && t.who === a.id)
     .sort((x, y) => y.amount - x.amount)[0];
+  const topCat = memberTopCategory(state, key, a.id);
   const color = a.id === 'maya' ? '#1d6b4f' : a.id === 'daniel' ? '#2b5f8a' : a.id === 'sofia' ? '#c25e7a' : '#7a5c1e';
   // Their personal savings challenge (v12): one target each, filled by
   // banking unspent allowance — the banked records are the progress.
@@ -140,6 +156,7 @@ function memberCard(state, key, a) {
     + '<p style="margin:12px 0 4px"><b>' + money(spent) + '</b> spent of <b>' + money(a.monthly) + '</b> allowance · 6-mo avg ' + money(avg) + '</p>'
     + '<div class="bar"><i class="' + (over ? 'over' : pct > 85 ? 'amber' : '') + '" style="width:' + pct.toFixed(1) + '%"></i></div>'
     + '<p class="muted small" style="margin:10px 0 4px">' + (mine ? 'Biggest this month: ' + esc(mine.description) + ' — ' + money(mine.amount) + ' (' + esc(categoryById(mine.category).label) + ')' : 'Nothing tagged to ' + esc(a.who) + ' yet this month.') + '</p>'
+    + '<p class="muted small" style="margin:4px 0">' + (topCat ? 'Top category: <b>' + esc(topCat.label) + '</b> — ' + money(topCat.amount) + (spent > 0 ? ' (' + Math.round(topCat.amount / spent * 100) + '% of what ' + esc(a.who) + ' spent)' : '') : 'No category spending to report yet.') + '</p>'
     + '<p class="muted small" style="margin:4px 0">' + (memberBankedTotal(state, a.id) > 0 ? 'Banked ' + money(memberBankedTotal(state, a.id)) + ' of unspent allowance into savings so far' : 'Nothing banked into savings yet — unspent allowance can be banked from ' + esc(a.who) + '’s page.') + '</p>'
     + '<div class="bar-row" style="margin-top:10px"><div class="bar-top"><span><b>Challenge: ' + esc(ch.name) + '</b></span><span>' + money(chBanked) + ' of ' + money(ch.target) + ' · ' + chPct.toFixed(0) + '%</span></div>'
     + '<div class="bar"><i style="width:' + chPct.toFixed(1) + '%;background:' + color + '"></i></div></div>'
@@ -244,19 +261,36 @@ function renderDetail(state, root, memberId) {
           + '<p class="muted small" style="margin:6px 0 0">' + (mine > 0 ? esc(a.who) + ' banked <b>' + money(mine) + '</b> into this goal — ' + share.toFixed(1) + '% of what is saved here.' : 'Nothing banked into this goal yet — pick it in the “Bank the unspent allowance” card above.') + '</p></div>';
       }).join('')
     + '</div>';
+  // Monthly report (v22): one card that reads like a payslip for the
+  // person — what they spent, on what, what is left, and what they
+  // banked — every figure counted from their own tagged transactions
+  // and banked records for this month, so the card can never disagree
+  // with the pages it summarises.
+  const taggedCount = mine.length;
+  const taggedExpense = mine.filter((t) => t.kind === 'expense');
+  const topCat = memberTopCategory(state, key, a.id);
+  const biggest = taggedExpense.slice().sort((x, y) => y.amount - x.amount)[0];
+  const reportCard = '<div class="card" style="margin-top:16px"><h2>' + esc(a.who) + '’s ' + esc(monthLabel(key).split(' ')[0]) + ' report</h2>'
+    + '<p style="margin-top:0">' + esc(a.who) + ' spent <b>' + money(spent) + '</b> of a <b>' + money(a.monthly) + '</b> allowance across <b>' + taggedCount + ' tagged transaction' + (taggedCount === 1 ? '' : 's') + '</b>'
+    + (topCat ? ' — most of it on <b>' + esc(topCat.label) + '</b> (' + money(topCat.amount) + (spent > 0 ? ', ' + Math.round(topCat.amount / spent * 100) + '% of the month’s tagged spending' : '') + ')' : '')
+    + (biggest ? ', the biggest single spend ' + esc(biggest.description) + ' at ' + money(biggest.amount) + ' on ' + fmtDate(biggest.date) : '') + '.</p>'
+    + '<p style="margin:8px 0 0">' + (over
+        ? '<span class="pill over">Over by ' + money(spent - a.monthly) + '</span> <span class="muted small">The allowance ran out — next month starts again at ' + money(a.monthly) + ', and the overspend is the lesson, not a debt.</span>'
+        : '<span class="pill">' + money(left) + ' left</span> <span class="muted small">' + (bankedThis > 0 ? 'Banked ' + money(bankedThis) + ' of it into savings this month — ' + money(bankedTotal) + ' banked in total, ' + chPct.toFixed(0) + '% of the ' + esc(ch.name) + ' challenge (' + money(ch.target) + ').' : 'Nothing banked yet this month — the “Bank the unspent allowance” card below moves it into a goal, and every dollar counts toward the ' + esc(ch.name) + ' challenge (' + money(bankedTotal) + ' of ' + money(ch.target) + ' banked so far).') + '</span>') + '</p>'
+    + '<p class="muted small" style="margin:8px 0 0">Six-month average left unspent: ' + money(avgLeft) + ' a month · lightest month ' + monthLabel(bestMonth.key) + ' (' + money(bestMonth.spent) + ' spent). Shared household costs — rent, bills, the weekly shop — are never tagged to anyone and never appear in this report.</p></div>';
   const histRows = hist.map((h) => {
     const status = h.spent > h.allowance ? '<span class="pill over">Over by ' + money(h.spent - h.allowance) + '</span>'
       : h.spent > h.allowance * 0.85 ? '<span class="pill warn">Almost all used</span>' : '<span class="pill">Kept ' + money(Math.max(0, h.left)) + '</span>';
     return '<tr><td>' + monthLabel(h.key) + '</td><td class="amount">' + money(h.allowance) + '</td><td class="amount">' + money(h.spent) + '</td><td class="amount"><b class="' + (h.left < 0 ? 'neg' : 'pos') + '">' + money(h.left) + '</b></td><td>' + status + '</td></tr>';
   }).join('');
-  const txRows = mine.length ? '<table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="amount">Amount</th><th></th></tr></thead><tbody>'
+  const txRows = mine.length ? '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="amount">Amount</th><th></th></tr></thead><tbody>'
     + mine.map((t) => {
         const cat = categoryById(t.category);
         return '<tr><td class="num">' + fmtDate(t.date) + '</td><td><b>' + esc(t.description) + '</b>' + (t.note ? '<span class="muted small" style="display:block">' + esc(t.note) + '</span>' : '') + '</td>'
           + '<td><span class="cat-dot" style="background:' + cat.color + '"></span>' + esc(cat.label) + '</td>'
           + '<td class="amount"><span class="' + (t.kind === 'income' ? 'pos' : 'neg') + '">' + (t.kind === 'income' ? '+' : '−') + money(t.amount) + '</span></td>'
           + '<td><button class="icon-btn" data-edit="' + t.id + '">Edit</button> <button class="icon-btn" data-del="' + t.id + '">Delete</button></td></tr>';
-      }).join('') + '</tbody></table>'
+      }).join('') + '</tbody></table></div>'
     : '<p class="empty">No transactions tagged to ' + esc(a.who) + ' in ' + monthLabel(key) + ' yet — press “Add spending” and tag the first one.</p>';
 
   root.innerHTML =
@@ -268,9 +302,10 @@ function renderDetail(state, root, memberId) {
     + '<div class="card kpi ' + (over ? 'warn' : 'good') + '"><div class="kpi-label">' + (over ? 'Over the allowance' : 'Left to spend') + '</div><div class="kpi-value num">' + money(Math.abs(left)) + '</div><div class="kpi-sub">' + (over ? 'Spent past the monthly amount' : 'Free money, no questions asked') + '</div></div>'
     + '<div class="card kpi"><div class="kpi-label">6-month average left</div><div class="kpi-value num">' + money(avgLeft) + '</div><div class="kpi-sub">Average spent ' + money(avgSpent) + ' a month · lightest month ' + monthLabel(bestMonth.key) + ' (' + money(bestMonth.spent) + ')</div></div>'
     + '</div>'
+    + reportCard
     + '<div class="grid two"><div class="card"><h2>Allowance vs spending — last 6 months</h2><div class="chart-wrap"><canvas id="chart-member" class="chart" height="200"></canvas></div>'
     + '<p class="muted small">Green bars are inside the allowance; red bars went over it. ' + esc(a.who) + '’s allowance is ' + money(a.monthly) + ' a month.</p></div>'
-    + '<div class="card"><h2>Allowance history</h2><table><thead><tr><th>Month</th><th class="amount">Allowance</th><th class="amount">Spent</th><th class="amount">Left</th><th>Result</th></tr></thead><tbody>' + histRows + '</tbody></table></div></div>'
+    + '<div class="card"><h2>Allowance history</h2><div class="table-scroll"><table><thead><tr><th>Month</th><th class="amount">Allowance</th><th class="amount">Spent</th><th class="amount">Left</th><th>Result</th></tr></thead><tbody>' + histRows + '</tbody></table></div></div></div>'
     + bankCard
     + challengeCard
     + savingsCard

@@ -1,6 +1,6 @@
 // Hearth & Home Budget — app shell: routing, dialogs, add/edit/delete,
 // CSV export and reset. State lives in data.js and persists to localStorage.
-import { loadState, saveState, sampleState, CATEGORIES, categoryById, meetingForMonth, money, monthLabel, networthSummary, todayISO, uid, monthTransactions, memberChallengeStore } from './data.js';
+import { loadState, saveState, sampleState, CATEGORIES, categoryById, meetingForMonth, money, monthLabel, networthSummary, todayISO, uid, monthTransactions, memberChallengeStore, shiftMonth } from './data.js';
 import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights, setInsightCat } from './views.js';
 
 let state = loadState();
@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -60,6 +60,7 @@ async function showView(route) {
   if (route === 'rules') (await import('./rules.js')).renderRules(state, root);
   if (route === 'stores') (await import('./stores.js')).renderStores(state, root);
   if (route === 'debtfree') (await import('./debtfree.js')).renderDebtfree(state, root);
+  if (route === 'calendar') (await import('./calendar.js')).renderCalendar(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -96,6 +97,14 @@ async function renderStoresLive() {
 async function renderDebtfreeLive() {
   if (currentRoute() !== 'debtfree') return;
   (await import('./debtfree.js')).renderDebtfree(state, $('#view-debtfree'));
+}
+
+// Re-render just the Money calendar view (used after picking a day,
+// filtering by kind, or marking a bill paid / running an auto-save
+// rule from the open day's detail).
+async function renderCalendarLive() {
+  if (currentRoute() !== 'calendar') return;
+  (await import('./calendar.js')).renderCalendar(state, $('#view-calendar'));
 }
 
 // Re-render just the Reports view (used while typing in the payoff planner).
@@ -723,6 +732,43 @@ app.addEventListener('click', async (e) => {
     state.sample = false;
     persist();
     renderDebtfreeLive();
+    return;
+  }
+  // ---- Money calendar (v22): open a day, filter the grid by kind,
+  // step between months, jump back to this month, add a transaction
+  // already dated to the open day. ----
+  const calDayBtn = t.closest('[data-cal-day]');
+  if (calDayBtn) {
+    const cal = await import('./calendar.js');
+    cal.setCalDay(calDayBtn.dataset.calDay);
+    renderCalendarLive();
+    return;
+  }
+  const calFilterBtn = t.closest('[data-cal-filter]');
+  if (calFilterBtn) {
+    const cal = await import('./calendar.js');
+    cal.setCalFilter(calFilterBtn.dataset.calFilter);
+    renderCalendarLive();
+    return;
+  }
+  if (t.closest('[data-cal-prev]') || t.closest('[data-cal-next]')) {
+    const delta = t.closest('[data-cal-prev]') ? -1 : 1;
+    state.currentMonth = shiftMonth(state.currentMonth, delta);
+    persist();
+    rerender();
+    return;
+  }
+  if (t.closest('[data-cal-today]')) {
+    state.currentMonth = todayISO().slice(0, 7);
+    persist();
+    rerender();
+    return;
+  }
+  if (t.closest('[data-cal-add-tx]')) {
+    const cal = await import('./calendar.js');
+    openTxDialog(null);
+    const day = cal.calOpenDay();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(day)) $('#tx-date').value = day;
     return;
   }
   // ---- Bills: pay all due (v20) — one press, one confirm, every
