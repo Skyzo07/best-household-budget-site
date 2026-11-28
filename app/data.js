@@ -78,12 +78,13 @@ function sampleTransactions() {
     ['2026-11-13', 'expense', 'groceries', 121.40, 'Top-up groceries', ''],
     ['2026-11-04', 'expense', 'dining', 46.80, 'Family dinner out', 'Friday treat'],
     ['2026-11-08', 'expense', 'dining', 38.50, 'Pizza night', ''],
-    ['2026-11-11', 'expense', 'dining', 52.25, 'Lunch with friends', ''],
+    ['2026-11-11', 'expense', 'dining', 52.25, 'Lunch with friends', '', 'maya'],
     ['2026-11-07', 'expense', 'fun', 64, 'Cinema — family movie', ''],
     ['2026-11-15', 'expense', 'fun', 42, 'Board game + snacks', ''],
     ['2026-11-09', 'expense', 'transport', 38, 'Bus passes — kids', ''],
     ['2026-11-14', 'expense', 'shopping', 89.99, 'Winter jackets — kids', 'Sale'],
-    ['2026-11-16', 'expense', 'kids', 24.50, 'School lunch top-up', ''],
+    ['2026-11-16', 'expense', 'kids', 24.50, 'School lunch top-up', '', 'sofia'],
+    ['2026-11-20', 'expense', 'fun', 12, 'Comic book — Liam', '', 'liam'],
     ['2026-11-17', 'expense', 'other', 35, 'Haircuts — both kids', ''],
     // October 2026
     ['2026-10-01', 'income', 'salary', 4200, 'October salary — Maya', ''],
@@ -122,6 +123,41 @@ function sampleTransactions() {
     ['2026-09-21', 'expense', 'fun', 54, 'Streaming + games', ''],
     ['2026-09-24', 'expense', 'shopping', 98.75, 'Kitchenware', ''],
     // Earlier months (trend only, lighter detail)
+    ['2026-05-01', 'income', 'salary', 5650, 'May salaries', ''],
+    ['2026-05-01', 'expense', 'housing', 1450, 'Rent', ''],
+    ['2026-05-10', 'expense', 'groceries', 588, 'Groceries — May', ''],
+    ['2026-05-12', 'expense', 'utilities', 189, 'Utilities — May', ''],
+    ['2026-05-15', 'expense', 'transport', 275, 'Transport — May', ''],
+    ['2026-05-18', 'expense', 'dining', 192, 'Dining — May', ''],
+    ['2026-05-20', 'expense', 'kids', 165, 'Kids — May', ''],
+    ['2026-04-01', 'income', 'salary', 5650, 'April salaries', ''],
+    ['2026-04-01', 'expense', 'housing', 1450, 'Rent', ''],
+    ['2026-04-10', 'expense', 'groceries', 621, 'Groceries — April', ''],
+    ['2026-04-12', 'expense', 'utilities', 204, 'Utilities — April', ''],
+    ['2026-04-15', 'expense', 'transport', 301, 'Transport — April', ''],
+    ['2026-04-18', 'expense', 'dining', 174, 'Dining — April', ''],
+    ['2026-04-20', 'expense', 'fun', 148, 'Fun — April', ''],
+    ['2026-03-01', 'income', 'salary', 5650, 'March salaries', ''],
+    ['2026-03-01', 'expense', 'housing', 1450, 'Rent', ''],
+    ['2026-03-10', 'expense', 'groceries', 605, 'Groceries — March', ''],
+    ['2026-03-12', 'expense', 'utilities', 211, 'Utilities — March', ''],
+    ['2026-03-15', 'expense', 'transport', 288, 'Transport — March', ''],
+    ['2026-03-18', 'expense', 'dining', 186, 'Dining — March', ''],
+    ['2026-03-20', 'expense', 'kids', 195, 'Kids — March', ''],
+    ['2026-02-01', 'income', 'salary', 5650, 'February salaries', ''],
+    ['2026-02-01', 'expense', 'housing', 1450, 'Rent', ''],
+    ['2026-02-10', 'expense', 'groceries', 594, 'Groceries — February', ''],
+    ['2026-02-12', 'expense', 'utilities', 198, 'Utilities — February', ''],
+    ['2026-02-15', 'expense', 'transport', 272, 'Transport — February', ''],
+    ['2026-02-18', 'expense', 'dining', 158, 'Dining — February', ''],
+    ['2026-02-20', 'expense', 'fun', 121, 'Fun — February', ''],
+    ['2026-01-01', 'income', 'salary', 5650, 'January salaries', ''],
+    ['2026-01-01', 'expense', 'housing', 1450, 'Rent', ''],
+    ['2026-01-10', 'expense', 'groceries', 618, 'Groceries — January', ''],
+    ['2026-01-12', 'expense', 'utilities', 223, 'Utilities — January', ''],
+    ['2026-01-15', 'expense', 'transport', 296, 'Transport — January', ''],
+    ['2026-01-18', 'expense', 'dining', 171, 'Dining — January', ''],
+    ['2026-01-20', 'expense', 'kids', 230, 'Kids — January', ''],
     ['2026-08-01', 'income', 'salary', 5650, 'August salaries', ''],
     ['2026-08-01', 'expense', 'housing', 1450, 'Rent', ''],
     ['2026-08-10', 'expense', 'groceries', 640, 'Groceries — August', ''],
@@ -144,16 +180,75 @@ function sampleTransactions() {
     ['2026-06-18', 'expense', 'dining', 168, 'Dining — June', ''],
     ['2026-06-20', 'expense', 'fun', 132, 'Fun — June', ''],
   ];
-  return rows.map(([date, kind, category, amount, description, note], i) => ({
-    id: 'tx-sample-' + (i + 1), date, kind, category, amount, description, note,
+  return rows.map(([date, kind, category, amount, description, note, who], i) => ({
+    id: 'tx-sample-' + (i + 1), date, kind, category, amount, description, note, who: who || '',
   }));
+}
+
+export function sampleBills() {
+  // paidMonths records which months each bill was paid in. November 2026
+  // is the current month: the early-month bills are paid, later ones due.
+  return [
+    { id: 'bill-rent', name: 'Rent — 3-bed house', category: 'housing', amount: 1450, day: 1, paidMonths: ['2026-11', '2026-10', '2026-09'] },
+    { id: 'bill-electric', name: 'Electricity bill', category: 'utilities', amount: 132.40, day: 3, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-water', name: 'Water bill', category: 'utilities', amount: 58.20, day: 3, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-streaming', name: 'Streaming + music', category: 'fun', amount: 16.99, day: 7, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-school', name: 'School fees — term 4', category: 'kids', amount: 185, day: 10, paidMonths: ['2026-11'] },
+    { id: 'bill-gym', name: 'Gym membership', category: 'health', amount: 45, day: 12, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-internet', name: 'Internet — fibre', category: 'utilities', amount: 79, day: 15, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-phones', name: 'Mobile phones — family plan', category: 'utilities', amount: 120, day: 18, paidMonths: ['2026-11', '2026-10'] },
+    { id: 'bill-car-ins', name: 'Car insurance', category: 'transport', amount: 95, day: 22, paidMonths: ['2026-10'] },
+    { id: 'bill-home-ins', name: 'Home insurance', category: 'housing', amount: 68, day: 25, paidMonths: ['2026-10'] },
+  ];
+}
+
+export function sampleRecurring() {
+  // lastPosted records the last month a rule posted a transaction in.
+  return [
+    { id: 'rule-salary-maya', name: 'Salary — Maya', kind: 'income', category: 'salary', amount: 4200, day: 1, active: true, lastPosted: '2026-11' },
+    { id: 'rule-salary-daniel', name: 'Salary — Daniel', kind: 'income', category: 'salary', amount: 1450, day: 1, active: true, lastPosted: '2026-11' },
+    { id: 'rule-rent', name: 'Rent — 3-bed house', kind: 'expense', category: 'housing', amount: 1450, day: 1, active: true, lastPosted: '2026-11' },
+    { id: 'rule-streaming', name: 'Streaming + music', kind: 'expense', category: 'fun', amount: 16.99, day: 7, active: true, lastPosted: '2026-11' },
+    { id: 'rule-gym', name: 'Gym membership', kind: 'expense', category: 'health', amount: 45, day: 12, active: true, lastPosted: '2026-10' },
+    { id: 'rule-stall', name: 'Weekend market stall', kind: 'income', category: 'side', amount: 200, day: 14, active: true, lastPosted: '2026-11' },
+    { id: 'rule-internet', name: 'Internet — fibre', kind: 'expense', category: 'utilities', amount: 79, day: 15, active: true, lastPosted: '2026-10' },
+    { id: 'rule-phones', name: 'Mobile phones — family plan', kind: 'expense', category: 'utilities', amount: 120, day: 18, active: true, lastPosted: '2026-10' },
+  ];
+}
+
+export function sampleAllowances() {
+  return [
+    { id: 'maya', who: 'Maya', role: 'Mum · full-time', monthly: 150 },
+    { id: 'daniel', who: 'Daniel', role: 'Dad · part-time', monthly: 120 },
+    { id: 'sofia', who: 'Sofia', role: 'Age 11 · school', monthly: 25 },
+    { id: 'liam', who: 'Liam', role: 'Age 8 · school', monthly: 20 },
+  ];
+}
+
+export function sampleDebts() {
+  return [
+    { id: 'debt-card', name: 'Credit card — everyday bank', balance: 1250, apr: 19.9, minPayment: 35 },
+    { id: 'debt-car', name: 'Car loan — family car', balance: 8400, apr: 6.4, minPayment: 210 },
+  ];
+}
+
+// Fill v2 fields into a v1 saved state so older saves keep working.
+export function ensureV2(state) {
+  if (!state) return sampleState();
+  if (!Array.isArray(state.bills)) state.bills = sampleBills();
+  if (!Array.isArray(state.recurring)) state.recurring = sampleRecurring();
+  if (!Array.isArray(state.allowances)) state.allowances = sampleAllowances();
+  if (!Array.isArray(state.debts)) state.debts = sampleDebts();
+  if (typeof state.payoffExtra !== 'number') state.payoffExtra = 50;
+  state.version = 2;
+  return state;
 }
 
 export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 1,
+    version: 2,
     sample: true,
     currentMonth: '2026-11',
     budgets,
@@ -163,6 +258,11 @@ export function sampleState() {
       { id: 'goal-car', name: 'New family car deposit', target: 8000, saved: 2150, date: '2027-12-31' },
     ],
     transactions: sampleTransactions(),
+    bills: sampleBills(),
+    recurring: sampleRecurring(),
+    allowances: sampleAllowances(),
+    debts: sampleDebts(),
+    payoffExtra: 50,
   };
 }
 
@@ -172,7 +272,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return parsed;
+    return ensureV2(parsed);
   } catch {
     return sampleState();
   }

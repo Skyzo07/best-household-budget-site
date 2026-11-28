@@ -18,8 +18,11 @@
       <a href="#/" data-nav="dashboard">Dashboard</a>
       <a href="#/transactions" data-nav="transactions">Transactions</a>
       <a href="#/budgets" data-nav="budgets">Budgets</a>
+      <a href="#/bills" data-nav="bills">Bills &amp; recurring</a>
       <a href="#/goals" data-nav="goals">Savings goals</a>
+      <a href="#/annual" data-nav="annual">Annual</a>
       <a href="#/insights" data-nav="insights">Insights</a>
+      <a href="#/reports" data-nav="reports">Reports</a>
     </nav>
     <div class="month-switch" role="group" aria-label="Choose month">
       <button id="month-prev" type="button" aria-label="Previous month">‹</button>
@@ -33,8 +36,11 @@
   <section id="view-dashboard" class="view"></section>
   <section id="view-transactions" class="view" hidden></section>
   <section id="view-budgets" class="view" hidden></section>
+  <section id="view-bills" class="view" hidden></section>
   <section id="view-goals" class="view" hidden></section>
+  <section id="view-annual" class="view" hidden></section>
   <section id="view-insights" class="view" hidden></section>
+  <section id="view-reports" class="view" hidden></section>
 </main>
 
 <footer class="wrap foot">
@@ -81,6 +87,65 @@
     <div class="dialog-actions">
       <button type="button" class="btn ghost" id="goal-cancel">Cancel</button>
       <button type="submit" class="btn primary">Save goal</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="debt-dialog">
+  <form id="debt-form" method="dialog">
+    <h2 id="debt-dialog-title">Add a debt</h2>
+    <label>Debt name <input id="debt-name" type="text" required maxlength="60" placeholder="e.g. Credit card — everyday bank"></label>
+    <div class="form-row">
+      <label>Balance owed ($) <input id="debt-balance" type="number" min="0" step="10" required placeholder="1250"></label>
+      <label>APR (%) <input id="debt-apr" type="number" min="0" step="0.1" required placeholder="19.9"></label>
+    </div>
+    <label>Minimum payment per month ($) <input id="debt-min" type="number" min="0" step="5" required placeholder="35"></label>
+    <p class="form-error" id="debt-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn ghost" id="debt-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Save debt</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="bill-dialog">
+  <form id="bill-form" method="dialog">
+    <h2 id="bill-dialog-title">Add bill</h2>
+    <label>Bill name <input id="bill-name" type="text" required maxlength="60" placeholder="e.g. Internet — fibre"></label>
+    <div class="form-row">
+      <label>Amount ($) <input id="bill-amount" type="number" min="0.01" step="0.01" required placeholder="79.00"></label>
+      <label>Due day of month <input id="bill-day" type="number" min="1" max="31" step="1" required placeholder="15"></label>
+    </div>
+    <label>Category <select id="bill-category"></select></label>
+    <p class="form-error" id="bill-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn ghost" id="bill-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Save bill</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="rule-dialog">
+  <form id="rule-form" method="dialog">
+    <h2 id="rule-dialog-title">Add recurring rule</h2>
+    <label>Rule name <input id="rule-name" type="text" required maxlength="60" placeholder="e.g. Internet — fibre"></label>
+    <div class="form-row">
+      <label>Amount ($) <input id="rule-amount" type="number" min="0.01" step="0.01" required placeholder="79.00"></label>
+      <label>Type
+        <select id="rule-kind">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+      </label>
+    </div>
+    <div class="form-row">
+      <label>Category <select id="rule-category"></select></label>
+      <label>Day of month <input id="rule-day" type="number" min="1" max="31" step="1" required placeholder="15"></label>
+    </div>
+    <p class="form-error" id="rule-error" hidden></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn ghost" id="rule-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Save rule</button>
     </div>
   </form>
 </dialog>

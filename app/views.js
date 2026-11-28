@@ -1,6 +1,6 @@
 // Hearth & Home Budget — views: dashboard, transactions, budgets,
 // savings goals and insights. Each view renders from state + current month.
-import { CATEGORIES, categoryById, money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, lastMonths, shiftMonth } from './data.js';
+import { CATEGORIES, categoryById, money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, lastMonths, shiftMonth, todayISO } from './data.js';
 import { drawDonut, drawBars, drawTrend, ringSVG } from './charts.js';
 
 function esc(s) {
@@ -50,6 +50,29 @@ export function renderDashboard(state, root) {
   const safe = Math.max(0, t.income - t.expense);
   const goalTotal = state.goals.reduce((a, g) => a + g.saved, 0);
   const goalTarget = state.goals.reduce((a, g) => a + g.target, 0);
+  // Bills due soon: unpaid bills for this month, earliest first.
+  const unpaidBills = (state.bills || []).filter((b) => !(b.paidMonths || []).includes(key)).sort((a, b) => a.day - b.day);
+  const stillToPay = unpaidBills.reduce((a, b) => a + b.amount, 0);
+  const todayDay = Number(todayISO().slice(8, 10));
+  // Year to date: January through the current month.
+  const curYear = Number(key.slice(0, 4));
+  const curMonthNum = Number(key.slice(5, 7));
+  let ytdIncome = 0, ytdExpense = 0, bestYtd = null;
+  for (let m = 1; m <= curMonthNum; m++) {
+    const k = curYear + '-' + String(m).padStart(2, '0');
+    const mt = monthTotals(state, k);
+    ytdIncome += mt.income; ytdExpense += mt.expense;
+    if (!bestYtd || mt.saved > bestYtd.saved) bestYtd = { key: k, saved: mt.saved };
+  }
+  const ytdSaved = ytdIncome - ytdExpense;
+  // Pocket-money allowances: spent counts transactions tagged with the person.
+  const allowanceRows = (state.allowances || []).map((a) => {
+    let spent = 0;
+    for (const tx of monthTransactions(state, key)) if (tx.kind === 'expense' && tx.who === a.id) spent += tx.amount;
+    const left = Math.max(0, a.monthly - spent);
+    const pct = a.monthly ? Math.min(100, (spent / a.monthly) * 100) : 0;
+    return '<div class="allow-chip"><b>' + esc(a.who) + '</b><span>' + money(spent) + ' of ' + money(a.monthly) + '</span><span class="' + (left <= 0 ? 'neg' : 'pos') + '">' + money(left) + ' left</span><div class="bar"><i style="width:' + pct.toFixed(0) + '%"></i></div></div>';
+  }).join('');
   // 50/30/20 rule: needs vs wants vs savings, as shares of income.
   const NEEDS = ['housing', 'utilities', 'transport', 'groceries', 'health', 'kids'];
   const WANTS = ['dining', 'fun', 'shopping', 'other'];
@@ -79,6 +102,23 @@ export function renderDashboard(state, root) {
     + '<div class="card kpi"><div class="kpi-label">Safe to spend</div><div class="kpi-value num">' + money(safe) + '</div><div class="kpi-sub">Left after spending · goals ' + money(goalTotal) + ' of ' + money(goalTarget) + '</div></div>'
     + '</div>'
     + '<div class="grid two" style="margin-top:16px">'
+    + '<div class="card"><h2>Bills due soon <a href="#/bills">All bills →</a></h2>'
+    + (unpaidBills.length
+      ? '<ul class="tx-list">' + unpaidBills.slice(0, 3).map((b) => {
+          const cat = categoryById(b.category);
+          const late = b.day < todayDay;
+          return '<li><span class="tx-ico" style="background:' + cat.color + '22;color:' + cat.color + '">' + cat.icon + '</span>'
+            + '<span class="tx-main"><b>' + esc(b.name) + '</b><span>Due day ' + b.day + ' · ' + esc(cat.label) + '</span></span>'
+            + '<span class="tx-amt ' + (late ? 'out' : '') + '">' + money(b.amount) + (late ? ' · overdue' : '') + '</span></li>';
+        }).join('') + '</ul><p class="muted small">' + money(stillToPay) + ' still to pay across ' + unpaidBills.length + ' bill' + (unpaidBills.length === 1 ? '' : 's') + ' this month.</p>'
+      : '<p class="muted">Every bill for this month is paid. Nothing due — enjoy the quiet.</p>')
+    + '</div>'
+    + '<div class="card"><h2>' + curYear + ' so far <a href="#/annual">Annual overview →</a></h2>'
+    + '<p style="font-size:1.05rem">Saved <b>' + money(ytdSaved) + '</b> in ' + curMonthNum + ' months · income ' + money(ytdIncome) + ' · spent ' + money(ytdExpense) + '.</p>'
+    + '<p class="muted small">Best month was ' + monthLabel(bestYtd.key) + ' (' + money(bestYtd.saved) + ' saved). At this pace the household saves about ' + money(Math.round(ytdSaved / curMonthNum)) + ' a month — see the Annual page for the full year plan.</p>'
+    + '<p><a class="btn small ghost" href="#/reports">Print this month’s report</a></p></div>'
+    + '</div>'
+    + '<div class="grid two" style="margin-top:16px">'
     + '<div class="card"><h2>Where the money went <a href="#/transactions">All transactions →</a></h2><div class="chart-wrap"><canvas id="chart-donut" class="chart" height="150" aria-label="Spending by category chart"></canvas></div><ul class="legend">'
     + slices.map((s) => '<li><span class="cat-dot" style="background:' + s.color + '"></span>' + esc(s.label) + ' — <b>' + money(s.value) + '</b> (' + (t.expense ? Math.round(s.value / t.expense * 100) : 0) + '%)</li>').join('')
     + '</ul></div>'
@@ -94,7 +134,8 @@ export function renderDashboard(state, root) {
         return '<div class="bar-row"><div class="bar-top"><span><b>' + esc(g.name) + '</b></span><span>' + money(g.saved) + ' / ' + money(g.target) + ' · ' + pct.toFixed(0) + '%</span></div><div class="bar"><i style="width:' + Math.min(100, pct).toFixed(1) + '%"></i></div></div>';
       }).join('')
     + '<p class="muted small">Tip: move your saved amount into a goal the day payday lands — what you don’t see, you don’t spend.</p></div>'
-    + '</div>';
+    + '</div>'
+    + '<div class="card" style="margin-top:16px"><h2>Pocket money &amp; allowances <a href="#/bills">Manage →</a></h2><p class="muted small" style="margin-top:0">Each person’s free-spending money for ' + monthLabel(key) + ' — counted from their own tagged spending. No questions asked, no category to justify.</p><div class="allow-grid">' + allowanceRows + '</div></div>';
   drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
 }
 
@@ -191,7 +232,7 @@ export function renderInsights(state, root) {
   tips.push({ cls: 'good', text: '<strong>Housing is ' + (cur.income ? Math.round((spend.housing || 0) / cur.income * 100) : 0) + '% of income.</strong> Under 30% leaves room for savings — this household is inside the healthy range.' });
 
   root.innerHTML =
-    '<div class="page-head"><div><h1>Insights &amp; reports</h1><p class="muted">Six months of your household’s money, compared. Spotting the pattern is half the saving.</p></div>'
+    '<div class="page-head"><div><h1>Insights</h1><p class="muted">Six months of your household’s money, compared. Spotting the pattern is half the saving. For the printable summary and the debt plan, see <a href="#/reports">Reports</a>.</p></div>'
     + '<div><button class="btn ghost" id="btn-export">Export CSV</button></div></div>'
     + '<div class="card"><h2>Income vs spending — last 6 months</h2><div class="chart-wrap"><canvas id="chart-trend" class="chart" height="280"></canvas></div>'
     + '<p class="muted small">Green bars are income, gold bars are spending, the red line is what stayed saved each month.</p></div>'

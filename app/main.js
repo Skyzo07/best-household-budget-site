@@ -13,11 +13,11 @@ const app = $('#app');
 
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
-  return ['transactions', 'budgets', 'goals', 'insights'].includes(h) ? h : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'goals', 'annual', 'insights', 'reports'].includes(h) ? h : 'dashboard';
 }
 
-function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'goals', 'insights']) {
+async function showView(route) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'goals', 'annual', 'insights', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -30,10 +30,20 @@ function showView(route) {
   if (route === 'budgets') renderBudgets(state, root);
   if (route === 'goals') renderGoals(state, root);
   if (route === 'insights') renderInsights(state, root);
+  // New sections load on demand so the first load stays small.
+  if (route === 'bills') (await import('./bills.js')).renderBills(state, root);
+  if (route === 'annual') (await import('./annual.js')).renderAnnual(state, root);
+  if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   window.scrollTo(0, 0);
 }
 
 function rerender() { showView(currentRoute()); }
+
+// Re-render just the Reports view (used while typing in the payoff planner).
+async function renderReportsLive() {
+  if (currentRoute() !== 'reports') return;
+  (await import('./reports.js')).renderReports(state, $('#view-reports'));
+}
 
 function persist() { saveState(state); }
 
@@ -134,11 +144,127 @@ goalForm.addEventListener('submit', (e) => {
 });
 $('#goal-cancel').addEventListener('click', () => goalDialog.close());
 
+// ---- Bill dialog ----
+const billDialog = $('#bill-dialog');
+const billForm = $('#bill-form');
+let editingBillId = null;
+function openBillDialog(bill) {
+  editingBillId = bill ? bill.id : null;
+  $('#bill-dialog-title').textContent = bill ? 'Edit bill' : 'Add bill';
+  $('#bill-error').hidden = true;
+  fillCategorySelect($('#bill-category'), bill ? bill.category : 'utilities');
+  $('#bill-name').value = bill ? bill.name : '';
+  $('#bill-amount').value = bill ? bill.amount : '';
+  $('#bill-day').value = bill ? bill.day : '';
+  billDialog.showModal();
+}
+billForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = $('#bill-name').value.trim();
+  const amount = Number($('#bill-amount').value);
+  const day = Number($('#bill-day').value);
+  const err = $('#bill-error');
+  if (!name) { err.textContent = 'Please name the bill.'; err.hidden = false; return; }
+  if (!amount || amount <= 0) { err.textContent = 'Amount must be more than $0.'; err.hidden = false; return; }
+  if (!day || day < 1 || day > 31) { err.textContent = 'Due day must be 1–31.'; err.hidden = false; return; }
+  const data = { name, amount: Math.round(amount * 100) / 100, day, category: $('#bill-category').value };
+  if (editingBillId) {
+    const b = state.bills.find((x) => x.id === editingBillId);
+    if (b) Object.assign(b, data);
+  } else {
+    state.bills.push(Object.assign({ id: uid('bill'), paidMonths: [] }, data));
+  }
+  state.sample = false;
+  persist();
+  billDialog.close();
+  rerender();
+});
+$('#bill-cancel').addEventListener('click', () => billDialog.close());
+
+// ---- Recurring-rule dialog ----
+const ruleDialog = $('#rule-dialog');
+const ruleForm = $('#rule-form');
+let editingRuleId = null;
+function openRuleDialog(rule) {
+  editingRuleId = rule ? rule.id : null;
+  $('#rule-dialog-title').textContent = rule ? 'Edit recurring rule' : 'Add recurring rule';
+  $('#rule-error').hidden = true;
+  fillCategorySelect($('#rule-category'), rule ? rule.category : 'utilities');
+  $('#rule-name').value = rule ? rule.name : '';
+  $('#rule-amount').value = rule ? rule.amount : '';
+  $('#rule-kind').value = rule ? rule.kind : 'expense';
+  $('#rule-day').value = rule ? rule.day : '';
+  ruleDialog.showModal();
+}
+ruleForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = $('#rule-name').value.trim();
+  const amount = Number($('#rule-amount').value);
+  const day = Number($('#rule-day').value);
+  const err = $('#rule-error');
+  if (!name) { err.textContent = 'Please name the rule.'; err.hidden = false; return; }
+  if (!amount || amount <= 0) { err.textContent = 'Amount must be more than $0.'; err.hidden = false; return; }
+  if (!day || day < 1 || day > 31) { err.textContent = 'Day must be 1–31.'; err.hidden = false; return; }
+  const data = { name, amount: Math.round(amount * 100) / 100, kind: $('#rule-kind').value, category: $('#rule-category').value, day };
+  if (editingRuleId) {
+    const r = state.recurring.find((x) => x.id === editingRuleId);
+    if (r) Object.assign(r, data);
+  } else {
+    state.recurring.push(Object.assign({ id: uid('rule'), active: true, lastPosted: '' }, data));
+  }
+  state.sample = false;
+  persist();
+  ruleDialog.close();
+  rerender();
+});
+$('#rule-cancel').addEventListener('click', () => ruleDialog.close());
+
+// ---- Debt dialog ----
+const debtDialog = $('#debt-dialog');
+const debtForm = $('#debt-form');
+debtForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = $('#debt-name').value.trim();
+  const balance = Number($('#debt-balance').value);
+  const apr = Number($('#debt-apr').value);
+  const min = Number($('#debt-min').value);
+  const err = $('#debt-error');
+  if (!name) { err.textContent = 'Please name the debt.'; err.hidden = false; return; }
+  if (!balance || balance <= 0) { err.textContent = 'Balance must be more than $0.'; err.hidden = false; return; }
+  if (apr < 0) { err.textContent = 'APR cannot be negative.'; err.hidden = false; return; }
+  if (!min || min <= 0) { err.textContent = 'Minimum payment must be more than $0.'; err.hidden = false; return; }
+  state.debts.push({ id: uid('debt'), name, balance, apr, minPayment: min });
+  state.sample = false;
+  persist();
+  debtDialog.close();
+  rerender();
+});
+$('#debt-cancel').addEventListener('click', () => debtDialog.close());
+
 // ---- Delegated clicks ----
-app.addEventListener('click', (e) => {
+app.addEventListener('click', async (e) => {
   const t = e.target;
   if (t.id === 'btn-add-tx') { openTxDialog(null); return; }
   if (t.id === 'btn-add-goal') { openGoalDialog(null); return; }
+  if (t.id === 'btn-add-bill') { openBillDialog(null); return; }
+  if (t.id === 'btn-add-rule') { openRuleDialog(null); return; }
+  if (t.id === 'btn-add-debt') {
+    $('#debt-dialog-title').textContent = 'Add a debt';
+    $('#debt-error').hidden = true;
+    $('#debt-name').value = ''; $('#debt-balance').value = ''; $('#debt-apr').value = ''; $('#debt-min').value = '';
+    debtDialog.showModal();
+    return;
+  }
+  if (t.id === 'btn-print') { window.print(); return; }
+  if (t.id === 'btn-post-due') {
+    const bills = await import('./bills.js');
+    const posted = bills.postAllDue(state, state.currentMonth);
+    persist();
+    rerender();
+    if (posted.length) window.alert(posted.length + ' recurring item' + (posted.length === 1 ? '' : 's') + ' posted into Transactions for ' + monthLabel(state.currentMonth) + '.');
+    else window.alert('Nothing due to post — every active rule is already posted for this month.');
+    return;
+  }
   if (t.id === 'btn-export') { exportCSV(); return; }
   if (t.id === 'btn-reset') {
     if (window.confirm('Reset to the sample household data? Your changes will be replaced.')) {
@@ -186,6 +312,66 @@ app.addEventListener('click', (e) => {
       persist();
       rerender();
     }
+    return;
+  }
+  // ---- Bills & recurring (loaded on demand) ----
+  const bills = await import('./bills.js');
+  const billPaid = t.closest('[data-bill-paid]');
+  if (billPaid) {
+    bills.toggleBillPaid(state, billPaid.dataset.billPaid, state.currentMonth);
+    persist();
+    rerender();
+    return;
+  }
+  const billEdit = t.closest('[data-bill-edit]');
+  if (billEdit) {
+    const b = state.bills.find((x) => x.id === billEdit.dataset.billEdit);
+    if (b) openBillDialog(b);
+    return;
+  }
+  const billDel = t.closest('[data-bill-del]');
+  if (billDel) {
+    const b = state.bills.find((x) => x.id === billDel.dataset.billDel);
+    if (b && window.confirm('Delete the bill "' + b.name + '" (' + money(b.amount) + ')?')) {
+      state.bills = state.bills.filter((x) => x.id !== b.id);
+      state.sample = false;
+      persist();
+      rerender();
+    }
+    return;
+  }
+  const rulePost = t.closest('[data-rule-post]');
+  if (rulePost) {
+    const r = state.recurring.find((x) => x.id === rulePost.dataset.rulePost);
+    if (r) {
+      const tx = bills.postRule(state, r, state.currentMonth);
+      persist();
+      rerender();
+      if (tx) window.alert('Posted: ' + r.name + ' — ' + money(tx.amount) + ' into Transactions.');
+    }
+    return;
+  }
+  const ruleToggle = t.closest('[data-rule-toggle]');
+  if (ruleToggle) {
+    const r = state.recurring.find((x) => x.id === ruleToggle.dataset.ruleToggle);
+    if (r) { r.active = !r.active; state.sample = false; persist(); rerender(); }
+    return;
+  }
+  const ruleEdit = t.closest('[data-rule-edit]');
+  if (ruleEdit) {
+    const r = state.recurring.find((x) => x.id === ruleEdit.dataset.ruleEdit);
+    if (r) openRuleDialog(r);
+    return;
+  }
+  const ruleDel = t.closest('[data-rule-del]');
+  if (ruleDel) {
+    const r = state.recurring.find((x) => x.id === ruleDel.dataset.ruleDel);
+    if (r && window.confirm('Delete the recurring rule "' + r.name + '"?')) {
+      state.recurring = state.recurring.filter((x) => x.id !== r.id);
+      state.sample = false;
+      persist();
+      rerender();
+    }
   }
 });
 
@@ -208,6 +394,42 @@ app.addEventListener('input', (e) => {
       state.budgets[t.dataset.budget] = v;
       state.sample = false;
       persist();
+    }
+  }
+  if (t.dataset && t.dataset.allowance) {
+    const v = Number(t.value);
+    const a = state.allowances.find((x) => x.id === t.dataset.allowance);
+    if (a && Number.isFinite(v) && v >= 0) {
+      a.monthly = v;
+      state.sample = false;
+      persist();
+    }
+  }
+  if (t.dataset && t.dataset.debt) {
+    const [id, field] = t.dataset.debt.split(':');
+    const v = Number(t.value);
+    const d = state.debts.find((x) => x.id === id);
+    if (d && Number.isFinite(v) && v >= 0) {
+      d[field] = v;
+      state.sample = false;
+      persist();
+      // Recompute the payoff plan without losing the input's focus.
+      const pos = t.selectionStart;
+      renderReportsLive();
+      const el = document.querySelector('[data-debt="' + t.dataset.debt + '"]');
+      if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+    }
+  }
+  if (t.dataset && t.dataset.extra) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      state.payoffExtra = v;
+      state.sample = false;
+      persist();
+      const pos = t.selectionStart;
+      renderReportsLive();
+      const el = document.querySelector('[data-extra]');
+      if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
     }
   }
 });
