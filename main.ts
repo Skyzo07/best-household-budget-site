@@ -37,7 +37,18 @@
 // net-worth target measured against the pace it actually kept — plus
 // a Transactions member filter (who spent it) in the first-load views,
 // and a net-worth strip on the Dashboard. v11 first load: 6 files,
-// 38,569 bytes gzip-9.
+// 38,569 bytes gzip-9. v12 adds whatif.js (lazy too): a what-if
+// planner — trim dining / groceries / fun, save extra into a goal of
+// your choice, pay extra off the debts — recomputed live against the
+// current plan (month-end, net-worth pace, debt-free date, net-worth
+// target date), with presets and an Apply that writes the plan into
+// the budgets, the payoff planner and the forecast, plus Undo; and
+// one personal savings challenge per member on the Members page,
+// filled by banking unspent allowance, with an editable target.
+// v12 first load: 6 files, 39,886 bytes gzip-9 (target ≤ ~46 KB);
+// later by import() 13 files, 60,033 bytes gzip-9; whole app 20 files,
+// 351,034 bytes. Verified: /tmp/bhb-v12-verify.mjs, 66/66 checks PASS,
+// 0 JS errors, 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

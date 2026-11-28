@@ -283,11 +283,47 @@ export function sampleChallenges() {
   // 52-week challenge: weeks 1–20 already paid on the growing plan
   // ($1 + $2 + … + $20 = $210 saved). November has 6 no-spend days
   // marked, and the round-up pot holds $48.60 swept from October.
+  // Member challenges (v12): one personal savings target per person,
+  // filled by banking unspent allowance — the banked records are the
+  // progress, so the challenge and the banked money can never disagree.
   return {
     fiftyTwo: { mode: 'grow', paid: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20] },
     noSpend: { '2026-11': [3, 5, 9, 12, 15, 19] },
     roundUp: { pot: 48.60, swept: ['2026-10'] },
+    members: memberChallengeDefaults(),
   };
+}
+
+// One personal savings target per member (v12). The target is what
+// they are saving toward; the banked unspent allowance is the
+// progress. Maya's Christmas presents are the biggest — $300 — and
+// Liam's LEGO set the smallest, $60, because the targets fit the
+// person, not the household.
+export function memberChallengeDefaults() {
+  return {
+    maya: { target: 300, name: 'Christmas presents' },
+    daniel: { target: 200, name: 'Fishing gear' },
+    sofia: { target: 100, name: 'New bike' },
+    liam: { target: 60, name: 'LEGO set' },
+  };
+}
+
+// The per-member challenges, filled in for any member who lacks one
+// (a member added later starts at $100 toward a challenge of their
+// own). Targets and names are the member's own — edit the target on
+// their page and it saves as you type.
+export function memberChallengeStore(state) {
+  if (!state.challenges || typeof state.challenges !== 'object') state.challenges = sampleChallenges();
+  if (!state.challenges.members || typeof state.challenges.members !== 'object') state.challenges.members = memberChallengeDefaults();
+  for (const a of (state.allowances || [])) {
+    const c = state.challenges.members[a.id];
+    if (!c || typeof c !== 'object') state.challenges.members[a.id] = { target: 100, name: a.who + '’s challenge' };
+    else {
+      if (typeof c.target !== 'number' || c.target < 0) c.target = 100;
+      if (typeof c.name !== 'string' || !c.name) c.name = a.who + '’s challenge';
+    }
+  }
+  return state.challenges.members;
 }
 
 // Fill v5 fields into an older saved state so v1–v4 saves keep working.
@@ -370,12 +406,13 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 11,
+    version: 12,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
     review2027: { save: 0, groceries: 0, dining: 0 },
     networth: { target: 0 },
+    whatif: { extraSave: 100, cuts: { dining: 50, groceries: 30, fun: 20 }, extraDebt: 50, goalId: 'goal-emergency', applied: null },
     budgets,
     goals: [
       { id: 'goal-emergency', name: 'Emergency fund', target: 6000, saved: 4350, date: '2027-06-30' },
@@ -402,7 +439,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV11(parsed);
+    return ensureV12(parsed);
   } catch {
     return sampleState();
   }
@@ -616,6 +653,21 @@ export function reviewStore(state) {
     if (typeof state.review2027[k] !== 'number' || state.review2027[k] < 0) state.review2027[k] = 0;
   }
   return state.review2027;
+}
+
+// Fill v12 fields into an older saved state so v1–v11 saves keep working.
+// v12 adds the what-if planner settings (0 = not set yet, the page falls
+// back to its starting plan) and one personal savings challenge per
+// member. The version bump records that the save has been seen by v12 code.
+export function ensureV12(state) {
+  if (!state) return sampleState();
+  ensureV11(state);
+  if (!state.whatif || typeof state.whatif !== 'object') {
+    state.whatif = { extraSave: 100, cuts: { dining: 50, groceries: 30, fun: 20 }, extraDebt: 50, goalId: 'goal-emergency', applied: null };
+  }
+  memberChallengeStore(state);
+  state.version = 12;
+  return state;
 }
 
 // Fill v11 fields into an older saved state so v1–v10 saves keep working.

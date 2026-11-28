@@ -44,6 +44,30 @@ account, no server, nothing leaves your browser. Built for the make.fun
   it the biggest single purchase at once — and the whole story moves.
   The Dashboard shows the year at a glance with the saving target
   and the pace beside it.
+- **What-if planner** — try a change before you make it, and see what it
+  does to the whole household. Three levers, all from the household's own
+  figures: **trim a category** (dining out, groceries, fun & family — the
+  ones a habit can actually move), **save extra each month into a goal of
+  your choice**, and **pay extra off the debts**. The page recomputes live,
+  side by side against the current plan: next month ends at **$2,707.00**
+  instead of $2,657.00, the net-worth pace rises to **$2,843.43 a month**
+  ($34,121.16 a year), the debts clear in **September 2029** — 6 months
+  sooner, **$207.25 less interest** — and the $25,000 net-worth target
+  lands in January 2027, the same month as the current plan (the target
+  is only 2 months out, so the page says so plainly instead of inventing
+  a sooner date). The emergency fund still needs $1,650.00 — at $100
+  extra a month it fills in **April 2028, 17 months**, counting only the
+  extra. Pick a named plan in one press — **Debt-first** ($150 of cuts,
+  $200 extra to the debts: month-end $2,607.00), **Save-first**, or
+  **Tighten everything** — then change any box by hand. **Apply this
+  plan** writes the levers into the real plan: budgets fall (dining
+  $240.00 → $190.00, groceries $620.00 → $590.00, fun $200.00 →
+  $180.00), the payoff planner's extra rises $50.00 → $100.00 and the
+  forecast's extra saving rises to $100.00 — and **Undo** puts every
+  figure back exactly. A final card explains the maths and what it
+  leaves out, honestly: the trend is a straight line through six months,
+  the debts are held at their current balance, and the goal date counts
+  only the extra saving.
 - **Net worth** — what the household owns minus what it owes, worked out
   live from its own records and nothing else: the cash it kept, month by
   month (income minus spending, January to November: **$30,177.76**),
@@ -115,6 +139,15 @@ account, no server, nothing leaves your browser. Built for the make.fun
   their own banked share of it — Sofia banking her $0.50 into the holiday
   moves it from $980.00 to $980.50 and the card says so — so a kid can see
   their own money moving a goal, not just the household total.
+  **Personal savings challenges (v12):** one target per person, filled
+  only by banking unspent allowance — the banked record *is* the
+  progress, so the bar can never disagree with the money. Sofia's
+  **New bike, $100.00** (nothing banked yet, $100.00 to go — at her usual
+  $20.92 a month left unspent, about 5 months); Maya's **Christmas
+  presents, $300.00**; Daniel's **Fishing gear, $200.00**; Liam's
+  **LEGO set, $60.00**. Bank Sofia's $0.50 unspent from November and the
+  bar moves at once to $0.50 of $100.00, 1% — and the overview card shows
+  it too. Edit any target on the person's page and it saves as you type.
 - **Forecast** — next month, worked out from the household's own
   six-month history, not typed in: a projection for every budgeted
   category with a confidence note from how jumpy its last six months
@@ -214,7 +247,10 @@ account, no server, nothing leaves your browser. Built for the make.fun
   so older saves migrate in place too. v9 adds the forecast settings
   (method + extra saving) and the pantry auto-plan, both defaulted for
   older saves. v10 adds the 2027 targets (save / groceries / dining),
-  defaulted to this year's own pace for older saves.
+  defaulted to this year's own pace for older saves. v11 adds the
+  net-worth target, defaulted to the next $5,000 milestone. v12 adds the
+  what-if planner settings and one personal savings challenge per member,
+  both defaulted for older saves.
 
 ## Tech
 
@@ -222,7 +258,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The eleven newer sections are one-job
+  (routing, dialogs, CRUD, export). The twelve newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -230,7 +266,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   and comparison), `grocery.js` (meal plan, grocery list, pantry, staple price
   history), `members.js` (household members — one page per person, allowance
   history, tagged spending, banking unspent allowances into a chosen goal,
-  per-member savings progress), `savings.js` (savings challenges — 52-week,
+  per-member savings progress, personal savings challenges), `savings.js` (savings challenges — 52-week,
   no-spend days, round-up pot), `envelopes.js` (cash envelopes — fills,
   rollovers, transfers, per-envelope spending), `subscriptions.js`
   (subscription audit — keep / downgrade / cancel verdicts, totals and
@@ -239,7 +275,13 @@ account, no server, nothing leaves your browser. Built for the make.fun
   notes, projected month-end, yearly pace, emergency-fund date),
   `review.js` (year in review — best/tightest months, biggest single
   purchase, top categories, months inside budget, editable 2027 targets
-  measured against this year's pace). `favicon.ico` is a hand-drawn
+  measured against this year's pace), `networth.js` (net worth — what the
+  household owns minus what it owes, where the kept cash sits, month-by-month
+  trend across a zero line, editable net-worth target), `whatif.js`
+  (what-if planner — trim a category, save extra into a chosen goal, pay
+  extra off the debts; live side-by-side against the current plan with
+  presets, Apply that writes into the budgets / payoff planner / forecast,
+  and Undo). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -267,9 +309,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-networth.png` — Net worth: $20,077.76, what the household owns split by where it sits, what it owes, and the month it turned positive (desktop, 1280×800)
-- `screenshots/3-review.png` — Year in review: 2026 story, biggest single purchase, month-by-month table and the three editable 2027 targets (desktop, 1280×800)
-- `screenshots/4-transactions-phone.png` — Transactions on a phone (390×844): search, category/type/member filters and the filtered totals
+- `screenshots/2-whatif.png` — What-if planner: month-end $2,707.00, net-worth pace $2,843.43 a month, debt-free September 2029, and the trim table (desktop, 1280×800)
+- `screenshots/3-members-phone.png` — Household members on a phone (390×844): allowances, biggest spender, and each person's savings challenge
+- `screenshots/4-networth.png` — Net worth: $20,077.76, what the household owns split by where it sits, what it owes, and the month it turned positive (desktop, 1280×800)
 
 ## License
 

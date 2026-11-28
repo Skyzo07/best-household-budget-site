@@ -4,7 +4,7 @@
 // transaction with no person tagged is household-shared and counts toward
 // nobody — only tagged spending eats into an allowance. All figures come
 // from state; nothing is faked.
-import { categoryById, money, money0, monthLabel, monthTransactions, lastMonths, shiftMonth, uid } from './data.js';
+import { categoryById, money, money0, monthLabel, monthTransactions, lastMonths, shiftMonth, uid, memberChallengeStore } from './data.js';
 import { drawBars } from './charts.js';
 
 function esc(s) {
@@ -128,6 +128,12 @@ function memberCard(state, key, a) {
   const mine = monthTransactions(state, key).filter((t) => t.kind === 'expense' && t.who === a.id)
     .sort((x, y) => y.amount - x.amount)[0];
   const color = a.id === 'maya' ? '#1d6b4f' : a.id === 'daniel' ? '#2b5f8a' : a.id === 'sofia' ? '#c25e7a' : '#7a5c1e';
+  // Their personal savings challenge (v12): one target each, filled by
+  // banking unspent allowance — the banked records are the progress.
+  const chs = memberChallengeStore(state);
+  const ch = chs[a.id] || { target: 100, name: a.who + '’s challenge' };
+  const chBanked = memberBankedTotal(state, a.id);
+  const chPct = ch.target ? Math.min(100, (chBanked / ch.target) * 100) : 0;
   return '<div class="card member-card"><div class="member-top"><span class="member-ava" style="background:' + color + '22;color:' + color + '">' + esc(a.who.charAt(0)) + '</span>'
     + '<div><h3>' + esc(a.who) + '</h3><p class="muted small" style="margin:0">' + esc(a.role) + '</p></div>'
     + '<span class="pill ' + (over ? 'over' : left <= a.monthly * 0.15 ? 'warn' : '') + '">' + (over ? 'Over by ' + money(spent - a.monthly) : money(left) + ' left') + '</span></div>'
@@ -135,6 +141,8 @@ function memberCard(state, key, a) {
     + '<div class="bar"><i class="' + (over ? 'over' : pct > 85 ? 'amber' : '') + '" style="width:' + pct.toFixed(1) + '%"></i></div>'
     + '<p class="muted small" style="margin:10px 0 4px">' + (mine ? 'Biggest this month: ' + esc(mine.description) + ' — ' + money(mine.amount) + ' (' + esc(categoryById(mine.category).label) + ')' : 'Nothing tagged to ' + esc(a.who) + ' yet this month.') + '</p>'
     + '<p class="muted small" style="margin:4px 0">' + (memberBankedTotal(state, a.id) > 0 ? 'Banked ' + money(memberBankedTotal(state, a.id)) + ' of unspent allowance into savings so far' : 'Nothing banked into savings yet — unspent allowance can be banked from ' + esc(a.who) + '’s page.') + '</p>'
+    + '<div class="bar-row" style="margin-top:10px"><div class="bar-top"><span><b>Challenge: ' + esc(ch.name) + '</b></span><span>' + money(chBanked) + ' of ' + money(ch.target) + ' · ' + chPct.toFixed(0) + '%</span></div>'
+    + '<div class="bar"><i style="width:' + chPct.toFixed(1) + '%;background:' + color + '"></i></div></div>'
     + '<div class="member-spark">' + sparkSVG(hist, color) + '<span class="muted small">spending, last 6 months</span></div>'
     + '<p style="margin:10px 0 0"><a class="btn small ghost" href="#/members/' + a.id + '">Open ' + esc(a.who) + '’s page →</a> <button class="btn small" data-member-spend="' + a.id + '">+ Add spending</button></p>'
     + '</div>';
@@ -198,6 +206,30 @@ function renderDetail(state, root, memberId) {
         ? '<p><button type="button" class="btn small" data-bank-unspent="' + a.id + '">Bank ' + money(left) + ' of unspent allowance →</button> <span class="muted small">The allowance resets next month either way — banked money stays saved.</span></p>'
         : '<p class="muted small">Nothing to bank this month — the allowance is spent out. Spend a little less next month and the button appears.</p>')
     + '</div>';
+  // Personal savings challenge (v12): one target per person, filled
+  // only by banking unspent allowance — the banked records are the
+  // progress, so the bar can never disagree with the money. The
+  // "Bank" button is the same one as above: it banks this month's
+  // unspent allowance into the goal picked there, and this bar moves.
+  const chs = memberChallengeStore(state);
+  const ch = chs[a.id] || { target: 100, name: a.who + '’s challenge' };
+  const chPct = ch.target ? Math.min(100, (bankedTotal / ch.target) * 100) : 0;
+  const chLeft = Math.max(0, Math.round((ch.target - bankedTotal) * 100) / 100);
+  const monthsToCh = chLeft <= 0 ? 0 : (avgLeft > 0 ? Math.ceil(chLeft / avgLeft) : -1);
+  const challengeCard = '<div class="card" style="margin-top:16px"><h2>' + esc(a.who) + '’s challenge — ' + esc(ch.name) + '</h2>'
+    + '<p class="muted small" style="margin-top:0">One personal target, filled the slow honest way: by not spending the whole allowance and banking what is left. Every dollar banked — into any goal — counts toward it, because the banked record is the progress.</p>'
+    + '<div class="bar-row"><div class="bar-top"><span><b>' + esc(ch.name) + '</b></span><span>' + money(bankedTotal) + ' of ' + money(ch.target) + ' banked · ' + chPct.toFixed(0) + '%</span></div>'
+    + '<div class="bar"><i style="width:' + chPct.toFixed(1) + '%;background:' + color + '"></i></div></div>'
+    + '<p style="margin:10px 0 0">' + (chLeft <= 0
+        ? '<span class="pill">Challenge complete ✓</span> <span class="muted small">' + esc(a.who) + ' banked the whole ' + money(ch.target) + ' — raise the target below for the next one.</span>'
+        : '<b>' + money(chLeft) + ' to go.</b> ' + (monthsToCh > 0 ? 'At the usual ' + money(avgLeft) + ' a month left unspent, that lands in about <b>' + monthsToCh + ' month' + (monthsToCh === 1 ? '' : 's') + '</b> — sooner if a big month gets banked whole.' : 'Bank an unspent month below and the bar moves at once.')) + '</p>'
+    + (bankedThis <= 0 && left > 0
+        ? '<p style="margin:10px 0 0"><button type="button" class="btn small" data-bank-unspent="' + a.id + '">Bank ' + money(left) + ' of unspent allowance →</button> <span class="muted small">Banks into the goal picked in the card above, and counts toward this challenge.</span></p>'
+        : bankedThis > 0
+          ? '<p class="muted small" style="margin:10px 0 0">This month is already banked (' + money(bankedThis) + '). Come back next month — or spend less next month and bank a bigger one.</p>'
+          : '<p class="muted small" style="margin:10px 0 0">Nothing unspent to bank this month — the allowance is spent out.</p>')
+    + '<p style="margin:12px 0 0"><label class="inline-label">Challenge target: $<input type="number" min="0" step="5" value="' + ch.target + '" data-mch-target="' + a.id + '" aria-label="Savings challenge target for ' + esc(a.who) + '" style="width:110px"> <span class="muted small">Edit it — it saves as you type. The target is yours; the progress is what you actually banked.</span></label></p>'
+    + '</div>';
   // Savings progress: each household goal with this person's own
   // banked share of it — banking is no longer invisible inside the
   // household total, so a kid can see their own money moving a goal.
@@ -240,6 +272,7 @@ function renderDetail(state, root, memberId) {
     + '<p class="muted small">Green bars are inside the allowance; red bars went over it. ' + esc(a.who) + '’s allowance is ' + money(a.monthly) + ' a month.</p></div>'
     + '<div class="card"><h2>Allowance history</h2><table><thead><tr><th>Month</th><th class="amount">Allowance</th><th class="amount">Spent</th><th class="amount">Left</th><th>Result</th></tr></thead><tbody>' + histRows + '</tbody></table></div></div>'
     + bankCard
+    + challengeCard
     + savingsCard
     + '<div class="card" style="margin-top:16px"><h2>' + esc(a.who) + '’s transactions — ' + monthLabel(key) + '</h2>' + txRows
     + '<p class="muted small">Switch months at the top of the page to see ' + esc(a.who) + '’s spending in any other month. Shared household costs (rent, bills, the weekly shop) are not tagged to anyone and never appear here.</p></div>';

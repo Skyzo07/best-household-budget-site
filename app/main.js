@@ -1,6 +1,6 @@
 // Hearth & Home Budget — app shell: routing, dialogs, add/edit/delete,
 // CSV export and reset. State lives in data.js and persists to localStorage.
-import { loadState, saveState, sampleState, CATEGORIES, categoryById, money, monthLabel, todayISO, uid, monthTransactions } from './data.js';
+import { loadState, saveState, sampleState, CATEGORIES, categoryById, money, monthLabel, todayISO, uid, monthTransactions, memberChallengeStore } from './data.js';
 import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights } from './views.js';
 
 let state = loadState();
@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -50,6 +50,7 @@ async function showView(route) {
   if (route === 'forecast') (await import('./forecast.js')).renderForecast(state, root);
   if (route === 'review') (await import('./review.js')).renderReview(state, root);
   if (route === 'networth') (await import('./networth.js')).renderNetworth(state, root);
+  if (route === 'whatif') (await import('./whatif.js')).renderWhatif(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -77,6 +78,18 @@ async function renderReviewLive() {
 async function renderNetworthLive() {
   if (currentRoute() !== 'networth') return;
   (await import('./networth.js')).renderNetworth(state, $('#view-networth'));
+}
+
+// Re-render just the What-if view (used while typing a lever).
+async function renderWhatifLive() {
+  if (currentRoute() !== 'whatif') return;
+  (await import('./whatif.js')).renderWhatif(state, $('#view-whatif'));
+}
+
+// Re-render just the Members view (used while typing a challenge target).
+async function renderMembersLive() {
+  if (currentRoute() !== 'members') return;
+  (await import('./members.js')).renderMembers(state, $('#view-members'), currentMemberId());
 }
 
 function persist() { saveState(state); }
@@ -411,6 +424,35 @@ app.addEventListener('click', async (e) => {
     state.sample = false;
     persist();
     rerender();
+    return;
+  }
+  // ---- What-if planner (v12): presets, apply, undo ----
+  const wiPresetBtn = t.closest('[data-wi-preset]');
+  if (wiPresetBtn) {
+    const wi = await import('./whatif.js');
+    wi.applyPreset(state, wiPresetBtn.dataset.wiPreset);
+    persist();
+    rerender();
+    return;
+  }
+  if (t.closest('[data-wi-apply]')) {
+    const wi = await import('./whatif.js');
+    const applied = wi.applyWhatif(state);
+    persist();
+    rerender();
+    if (applied) {
+      const cutTotal = Object.values(applied.cuts || {}).reduce((a, b) => a + b, 0);
+      window.alert('Plan applied: budgets down ' + money(cutTotal) + ' a month, payoff extra up ' + money(applied.extraDebt) + ', forecast extra saving up ' + money(applied.extraSave) + '. The Budgets, Reports and Forecast pages already show it — Undo puts it all back.');
+    }
+    return;
+  }
+  if (t.closest('[data-wi-undo]')) {
+    const wi = await import('./whatif.js');
+    if (wi.undoWhatif(state)) {
+      persist();
+      rerender();
+      window.alert('Undone — budgets, payoff extra and forecast extra are back where they were.');
+    }
     return;
   }
   // ---- Bills year grid: jump the month switcher to that month (v10) ----
@@ -907,6 +949,72 @@ app.addEventListener('input', (e) => {
       if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
     }
   }
+  if (t.dataset && t.dataset.wiCut !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      const id = t.dataset.wiCut;
+      const pos = t.selectionStart;
+      import('./whatif.js').then((wi) => {
+        const w = wi.whatifStore(state);
+        w.cuts[id] = Math.round(v * 100) / 100;
+        state.sample = false;
+        persist();
+        renderWhatifLive();
+        const el = document.querySelector('[data-wi-cut="' + id + '"]');
+        if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+      });
+    }
+    return;
+  }
+  if (t.dataset && t.dataset.wiExtraSave !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      const pos = t.selectionStart;
+      import('./whatif.js').then((wi) => {
+        const w = wi.whatifStore(state);
+        w.extraSave = Math.round(v * 100) / 100;
+        state.sample = false;
+        persist();
+        renderWhatifLive();
+        const el = document.querySelector('[data-wi-extra-save]');
+        if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+      });
+    }
+    return;
+  }
+  if (t.dataset && t.dataset.wiExtraDebt !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      const pos = t.selectionStart;
+      import('./whatif.js').then((wi) => {
+        const w = wi.whatifStore(state);
+        w.extraDebt = Math.round(v * 100) / 100;
+        state.sample = false;
+        persist();
+        renderWhatifLive();
+        const el = document.querySelector('[data-wi-extra-debt]');
+        if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+      });
+    }
+    return;
+  }
+  if (t.dataset && t.dataset.mchTarget !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      const id = t.dataset.mchTarget;
+      const chs = memberChallengeStore(state);
+      if (chs[id]) {
+        chs[id].target = Math.round(v * 100) / 100;
+        state.sample = false;
+        persist();
+        const pos = t.selectionStart;
+        renderMembersLive();
+        const el = document.querySelector('[data-mch-target="' + id + '"]');
+        if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+      }
+    }
+    return;
+  }
   if (t.dataset && t.dataset.reviewTarget !== undefined) {
     const v = Number(t.value);
     if (Number.isFinite(v) && v >= 0) {
@@ -935,6 +1043,16 @@ app.addEventListener('change', (e) => {
       persist();
       rerender();
     }
+  }
+  if (e.target.dataset && e.target.dataset.wiGoal !== undefined) {
+    const goalId = e.target.value;
+    import('./whatif.js').then((wi) => {
+      const w = wi.whatifStore(state);
+      w.goalId = goalId;
+      state.sample = false;
+      persist();
+      renderWhatifLive();
+    });
   }
 });
 
