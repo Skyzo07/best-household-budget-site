@@ -6,7 +6,7 @@
 // totals, and everything persists in localStorage. This is the audit
 // view — Bills is the due-date view, this one is the do-we-still-need-
 // it view. Loaded on demand, so it stays out of the first load.
-import { money, money0, monthEndISO, monthLabel, sampleSubscriptions, subMonthly, subTotals, subVerdict, subYearly, subscriptionStore, uid } from './data.js';
+import { money, money0, monthEndISO, monthLabel, sampleSubscriptions, subMonthly, subTotals, subVerdict, subYearly, subscriptionStore, todayISO, uid } from './data.js';
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -116,15 +116,26 @@ export function resetSubs(state) {
   state.sample = false;
 }
 
-// Mark a subscription as used today (the end of the viewed month):
-// its verdict flips to Keep at once, which is how the household
-// records that a "cancel" was wrong — the app was opened after all.
+// Mark a subscription as used today: its verdict flips to Keep at once,
+// which is how the household records that a "cancel" was wrong — the app
+// was opened after all. The date is also appended to the usage log, so
+// the "last used" judgement is backed by a visible history instead of
+// one lonely date. Pressing it twice on the same day logs it once.
 export function markUsed(state, id) {
   const s = (state.subscriptions || []).find((x) => x.id === id);
   if (!s || s.status === 'cancelled') return false;
-  s.lastUsed = monthEndISO(state.currentMonth);
+  const today = todayISO();
+  s.lastUsed = today;
+  if (!Array.isArray(s.uses)) s.uses = [];
+  if (s.uses[0] !== today) s.uses.unshift(today);
+  s.uses = s.uses.slice(0, 6);
   state.sample = false;
   return true;
+}
+
+function fmtShort(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function verdictPill(v) {
@@ -151,7 +162,7 @@ function subRow(state, ref, s, totals) {
   return '<tr><td><span class="cat-dot" style="background:' + color + '"></span><b>' + esc(s.name) + '</b><span class="muted small" style="display:block">' + esc(s.category) + ' · ' + billedNote + (s.downgraded ? ' · on the cheaper tier' : '') + '</span></td>'
     + '<td class="amount">' + money(mo) + '<span class="muted small" style="display:block">/ month</span></td>'
     + '<td class="amount">' + money(yr) + '<span class="muted small" style="display:block">/ year</span></td>'
-    + '<td>' + fmtDate(s.lastUsed) + '<span class="muted small" style="display:block">' + v.days + ' days ago</span></td>'
+    + '<td>' + fmtDate(s.lastUsed) + '<span class="muted small" style="display:block">' + v.days + ' days ago</span><span class="muted small" style="display:block">Used ' + (s.uses || []).length + '× logged: ' + (s.uses || []).slice(0, 3).map(fmtShort).join(' · ') + '</span></td>'
     + '<td>' + verdictPill(v) + '<span class="muted small" style="display:block">' + esc(v.note) + '</span></td>'
     + '<td>' + actions + '</td></tr>';
 }
@@ -201,7 +212,7 @@ export function renderSubscriptions(state, root) {
     + summary
     + '<div class="grid kpis" style="margin-top:16px">' + kpiCards + '</div>'
     + '<div class="card" style="margin-top:16px"><h2>Every subscription, judged</h2>'
-    + '<p class="muted small" style="margin-top:0">Sorted by longest unused first. Cancel removes it from the monthly total at once and moves it to the Cancelled list below — Restore brings it straight back, so nothing here is final.</p>'
+    + '<p class="muted small" style="margin-top:0">Sorted by longest unused first. Cancel removes it from the monthly total at once and moves it to the Cancelled list below — Restore brings it straight back, so nothing here is final. Every row also shows its usage log — the last dates anyone actually opened it — and “I used it — keep” adds today to the log and flips the verdict to Keep at once.</p>'
     + (active.length
       ? '<table><thead><tr><th>Subscription</th><th class="amount">Monthly</th><th class="amount">Yearly</th><th>Last used</th><th>Verdict</th><th>Do it</th></tr></thead><tbody>' + activeRows + '</tbody></table>'
       : '<p class="empty">No active subscriptions — everything is cancelled. Add one below, or reset the sample list.</p>')

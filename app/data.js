@@ -421,6 +421,48 @@ export function checkinStore(state) {
   return state.checkins;
 }
 
+// Four planned big purchases (v14): the things the household knows are
+// coming, with a cost, a date they are needed by, and what is already
+// set aside in each purchase's own pot. `goalId` is empty for all four
+// — the pot is the purchase's own — but a purchase added on the page
+// can be linked to a savings goal instead, and then its set-aside
+// follows the goal's balance live. The monthly set-aside and the
+// reachable date are worked out on the page from the household's own
+// saving pace, never stored, so an edited transaction moves them.
+export function sampleBigBuys() {
+  return [
+    { id: 'bb-school', name: 'School fees — term 1', cost: 540, target: '2027-01-31', saved: 300, goalId: '' },
+    { id: 'bb-car', name: 'Car service + new tyres', cost: 620, target: '2027-02-15', saved: 180, goalId: '' },
+    { id: 'bb-washer', name: 'New washing machine', cost: 850, target: '2027-03-31', saved: 240, goalId: '' },
+    { id: 'bb-sofa', name: 'New sofa for the living room', cost: 1400, target: '2027-08-31', saved: 150, goalId: '' },
+  ];
+}
+
+// The planned big purchases, filled in for an older save. Each record
+// is a name, a cost, a target date and what is already set aside —
+// the plan itself is computed live on the page.
+export function bigbuyStore(state) {
+  if (!Array.isArray(state.bigbuys)) state.bigbuys = sampleBigBuys();
+  state.bigbuys = state.bigbuys.filter((b) => b && typeof b.name === 'string' && Number(b.cost) > 0 && typeof b.target === 'string');
+  for (const b of state.bigbuys) {
+    if (typeof b.saved !== 'number' || b.saved < 0) b.saved = 0;
+    if (typeof b.goalId !== 'string') b.goalId = '';
+  }
+  return state.bigbuys;
+}
+
+// Fill v14 fields into an older saved state so v1–v13 saves keep working.
+// v14 adds the big-purchases plan (empty = no plan yet, the page falls
+// back to the four sample purchases). The version bump records that
+// the save has been seen by v14 code.
+export function ensureV14(state) {
+  if (!state) return sampleState();
+  ensureV13(state);
+  bigbuyStore(state);
+  state.version = 14;
+  return state;
+}
+
 // Fill v13 fields into an older saved state so v1–v12 saves keep working.
 // v13 adds the weekly check-in history (0 = not checked in yet, the
 // page falls back to the one sample check-in). The version bump records
@@ -437,7 +479,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 13,
+    version: 14,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -461,6 +503,7 @@ export function sampleState() {
     challenges: sampleChallenges(),
     subscriptions: sampleSubscriptions(),
     checkins: sampleCheckins(),
+    bigbuys: sampleBigBuys(),
     banked: {},
   };
 }
@@ -471,7 +514,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV13(parsed);
+    return ensureV14(parsed);
   } catch {
     return sampleState();
   }
@@ -613,6 +656,22 @@ export function monthEndISO(key) {
 export function subscriptionStore(state) {
   if (!Array.isArray(state.subscriptions)) state.subscriptions = sampleSubscriptions();
   if (!state.banked || typeof state.banked !== 'object') state.banked = {};
+  // Usage log (v14): every subscription keeps the dates it was last
+  // used, newest first. Older saves only stored the single last-used
+  // date, so the log is seeded from it — the last use, then one a
+  // month further back, up to four entries — and every "I used it"
+  // press from now on appends a real date to the log.
+  for (const s of state.subscriptions) {
+    if (Array.isArray(s.uses)) continue;
+    const log = [];
+    let d = Date.parse(s.lastUsed + 'T00:00:00Z');
+    const floor = Date.parse('2026-06-01T00:00:00Z');
+    while (!Number.isNaN(d) && d >= floor && log.length < 4) {
+      log.push(new Date(d).toISOString().slice(0, 10));
+      d -= 30 * 86400000;
+    }
+    s.uses = log.length ? log : [s.lastUsed];
+  }
   return state.subscriptions;
 }
 

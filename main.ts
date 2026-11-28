@@ -62,6 +62,19 @@
 // later by import() 14 files, 66,169 bytes gzip-9 (checkin.js 6,136
 // lazy); whole app 21 files, 375,708 bytes. Verified:
 // /tmp/bhb-v13-verify.mjs, 85/85 checks PASS, 0 JS errors,
+// 0 external requests. v14 adds bigbuys.js (lazy too): a big-purchases
+// planner — school fees, a car service, a washing machine, a new sofa,
+// each with a cost, a target date and what is already set aside, the
+// monthly set-aside and the ready month worked out live from the
+// household's own saving pace (about $2,700 a month over Sep–Nov),
+// the pace handed out by earliest target first, with an add form that
+// can link a purchase to a savings goal so its pot follows the goal's
+// balance live — plus a usage log on every subscription in the audit:
+// the last dates it was actually opened, with "I used it" appending
+// today to the log. v14 first load: 6 files, 42,786 bytes gzip-9
+// (target ≤ ~50 KB); later by import() 15 files, 72,105 bytes gzip-9
+// (bigbuys.js 5,665 lazy); whole app 22 files, 399,290 bytes.
+// Verified: /tmp/bhb-v14-verify.mjs, 80/80 checks PASS, 0 JS errors,
 // 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

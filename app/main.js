@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -52,6 +52,7 @@ async function showView(route) {
   if (route === 'networth') (await import('./networth.js')).renderNetworth(state, root);
   if (route === 'whatif') (await import('./whatif.js')).renderWhatif(state, root);
   if (route === 'checkin') (await import('./checkin.js')).renderCheckin(state, root);
+  if (route === 'bigbuys') (await import('./bigbuys.js')).renderBigbuys(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -496,6 +497,44 @@ app.addEventListener('click', async (e) => {
   if (t.closest('[data-insight-close]')) {
     setInsightCat('');
     rerender();
+    return;
+  }
+  // ---- Big purchases planner (v14): add to a pot, add, remove ----
+  const bbPotBtn = t.closest('[data-bb-pot]');
+  if (bbPotBtn) {
+    const bb = await import('./bigbuys.js');
+    const [id, amt] = bbPotBtn.dataset.bbPot.split(':');
+    const added = bb.addToPot(state, id, Number(amt));
+    persist();
+    rerender();
+    if (added > 0) {
+      const b = state.bigbuys.find((x) => x.id === id);
+      const left = b ? Math.max(0, Math.round((b.cost - bb.effectiveSaved(state, b)) * 100) / 100) : 0;
+      window.alert('Added ' + money(added) + ' to the pot — ' + money(left) + ' still to save for that one.');
+    }
+    return;
+  }
+  const bbDelBtn = t.closest('[data-bb-del]');
+  if (bbDelBtn) {
+    const bb = await import('./bigbuys.js');
+    const b = state.bigbuys.find((x) => x.id === bbDelBtn.dataset.bbDel);
+    if (b && window.confirm('Remove "' + b.name + '" (' + money(b.cost) + ') from the big-purchases plan?')) {
+      bb.removeBigBuy(state, b.id);
+      persist();
+      rerender();
+    }
+    return;
+  }
+  if (t.closest('[data-bb-add]')) {
+    const bb = await import('./bigbuys.js');
+    const added = bb.addBigBuy(state, $('#bb-add-name').value, $('#bb-add-cost').value, $('#bb-add-target').value, $('#bb-add-saved').value, $('#bb-add-goal').value);
+    persist();
+    rerender();
+    if (added) {
+      const plan = bb.bigbuyPlan(state);
+      const row = plan.rows.find((r) => r.b.id === added.id);
+      window.alert('Planned: ' + added.name + ' — ' + money(added.cost) + ' by ' + added.target + '. Set aside ' + money(row ? row.needed : 0) + ' a month and it is ready on time.');
+    }
     return;
   }
   // ---- Bills year grid: jump the month switcher to that month (v10) ----

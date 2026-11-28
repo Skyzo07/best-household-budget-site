@@ -89,6 +89,35 @@ account, no server, nothing leaves your browser. Built for the make.fun
   as the sample: checked in 8 November, "Cook at home 5 nights" —
   and it was kept, dining $46.80 against a $55.43 share. Re-saving a
   week updates it, never doubles it; Remove takes it out of the history.
+- **Big purchases (v14)** — the things the household knows are coming,
+  planned before they arrive instead of paid for on a credit card
+  afterwards: school fees $540.00 due 31 January 2027 ($300.00 already
+  set aside), a car service + new tyres $620.00 due 15 February
+  ($180.00 set aside), a new washing machine $850.00 due 31 March
+  ($240.00 set aside) and a new sofa $1,400.00 due 31 August ($150.00
+  set aside). The page works the plan out live from the household's own
+  saving pace — income minus spending, averaged over the last three
+  months: **$2,736.59 a month** (November saved $2,791.51, October
+  $2,710.65, September $2,707.60). Each purchase's monthly set-aside is
+  what is still to save divided by the months until its target date —
+  $80.00, $110.00, $122.00 and $125.00 a month, **$437.00 between them**
+  — and the pace is handed out by earliest target first, so the urgent
+  things are funded before the ones that can wait. All four are ready
+  by their target dates, with **$2,299.59 a month of pace still free**
+  for the savings goals and the debts. **+ $25 / + $50** moves money
+  into any pot and the ready date moves at once; the **add form** plans
+  a new purchase (name, cost, target date, already set aside) and can
+  link it to a savings goal, so its pot follows the goal's balance live
+  — add $25 here and the goal moves too. Remove takes a purchase out of
+  the plan. A purchase whose monthly need is bigger than the pace left
+  for it slips, and the ready month says by how far.
+- **Subscription audit — usage log (v14)** — every subscription now
+  shows the dates it was actually opened, not just the last one: a
+  visible log ("Used 4× logged: Nov 22 · Oct 23 · Sep 23") under the
+  last-used date, seeded from the household's own records for older
+  saves. Pressing **"I used it — keep"** adds today to the log and
+  flips the verdict to Keep at once — the audit's judgement is backed
+  by a history instead of one lonely date.
 - **Net worth** — what the household owns minus what it owes, worked out
   live from its own records and nothing else: the cash it kept, month by
   month (income minus spending, January to November: **$30,177.76**),
@@ -280,6 +309,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   what-if planner settings and one personal savings challenge per member,
   both defaulted for older saves. v13 adds the weekly check-in history
   (one sample check-in from week 1 of November), defaulted for older saves.
+  v14 adds the big-purchases plan (four sample purchases) and the
+  subscription usage logs (seeded from each subscription's last-used
+  date), both defaulted for older saves.
 
 ## Tech
 
@@ -287,7 +319,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The thirteen newer sections are one-job
+  (routing, dialogs, CRUD, export). The fourteen newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -299,7 +331,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   no-spend days, round-up pot), `envelopes.js` (cash envelopes — fills,
   rollovers, transfers, per-envelope spending), `subscriptions.js`
   (subscription audit — keep / downgrade / cancel verdicts, totals and
-  savings, add / cancel / restore / downgrade), `forecast.js` (spending
+  savings, add / cancel / restore / downgrade, usage log), `forecast.js` (spending
   forecast — per-category projections from the six-month trend, confidence
   notes, projected month-end, yearly pace, emergency-fund date),
   `review.js` (year in review — best/tightest months, biggest single
@@ -313,7 +345,12 @@ account, no server, nothing leaves your browser. Built for the make.fun
   and Undo), `checkin.js` (weekly check-in — this week's flexible
   spending against its weekly share of each monthly budget, fixed costs
   shown but not judged, one action for next week from the flagged
-  categories, saved check-in history). `favicon.ico` is a hand-drawn
+  categories, saved check-in history), `bigbuys.js` (big-purchases
+  planner — cost, target date and set-aside per purchase, monthly
+  set-aside and ready month worked out live from the household's own
+  saving pace, pace handed out by earliest target first, add form with
+  optional link to a savings goal, + $25 / + $50 into any pot, remove).
+  `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -341,9 +378,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-checkin.png` — Weekly check-in, week 2 of November: flexible spending $768.54 vs a $482.68 weekly share, groceries / kids / shopping / dining over, and the one job for next week (desktop, 1280×800)
-- `screenshots/3-whatif.png` — What-if planner: month-end $2,707.00, net-worth pace $2,843.43 a month, debt-free September 2029, and the trim table (desktop, 1280×800)
-- `screenshots/4-savings-phone.png` — Savings challenges on a phone (390×844): 52-week challenge, no-spend days and the round-up pot
+- `screenshots/2-bigbuys.png` — Big purchases: saving pace $2,736.59 a month, $870.00 set aside of $3,410.00 planned, $437.00 a month between the four purchases, all ready on time (desktop, 1280×800)
+- `screenshots/3-checkin.png` — Weekly check-in, week 2 of November: flexible spending $768.54 vs a $482.68 weekly share, groceries / kids / shopping / dining over, and the one job for next week (desktop, 1280×800)
+- `screenshots/4-envelopes-phone.png` — Cash envelopes on a phone (390×844): filled for November $2,557.20, with October's unspent $647.20 already rolled in
 
 ## License
 
