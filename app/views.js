@@ -1,6 +1,6 @@
 // Hearth & Home Budget — views: dashboard, transactions, budgets,
 // savings goals and insights. Each view renders from state + current month.
-import { CATEGORIES, categoryById, envelopeTotals, money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, lastMonths, shiftMonth, subTotals, todayISO } from './data.js';
+import { CATEGORIES, categoryById, envelopeTotals, money, money0, monthLabel, monthTotals, monthTransactions, categorySpend, lastMonths, networthSummary, shiftMonth, subTotals, todayISO } from './data.js';
 import { drawDonut, drawBars, drawTrend, ringSVG } from './charts.js';
 
 function esc(s) {
@@ -165,6 +165,11 @@ export function renderDashboard(state, root) {
   const revSaveTarget = revTargets.save > 0 ? revTargets.save : Math.round(revPace);
   const revStrip = '<div class="card" style="margin-top:16px"><h2>' + curYear + ' in review <a href="#/review">Year in review →</a></h2><div class="savings-strip"><p style="margin:0">Saved <b>' + money(ytdSaved) + '</b> in ' + curMonthNum + ' months · best month ' + monthLabel(bestYtd.key) + ' (' + money(bestYtd.saved) + ') · <b>' + (curMonthNum - revOver) + ' of ' + curMonthNum + ' months</b> inside the budget</p><p style="margin:0">2027 saving target: <b>' + money(revSaveTarget) + ' a month</b> · this year’s pace is ' + money(revPace) + ' a month ' + (revPace >= revSaveTarget ? '— on track ✓' : '— ' + money(Math.round((revSaveTarget - revPace) * 100) / 100) + ' a month short') + '</p><p style="margin:0"><a class="btn small ghost" href="#/review">Set your 2027 targets</a></p></div></div>';
 
+  // Net worth at a glance (v11): owns minus owes, and the date the
+  // household's own target lands on at the pace it actually kept.
+  const nw = networthSummary(state);
+  const nwStrip = '<div class="card" style="margin-top:16px"><h2>Net worth <a href="#/networth">Net worth →</a></h2><div class="savings-strip"><p style="margin:0">Net worth <b>' + (nw.net >= 0 ? '' : '−') + money(Math.abs(nw.net)) + '</b> · owns ' + money(nw.assets) + ' · owes ' + money(nw.liabilities) + (nw.firstPositive ? ' · turned positive in ' + monthLabel(nw.firstPositive.key) : ' · still under water') + '</p><p style="margin:0">' + (nw.gap > 0 ? 'On track to ' + money(nw.target) + ' by <b>' + monthLabel(nw.targetKey) + '</b> — ' + nw.monthsTo + ' month' + (nw.monthsTo === 1 ? '' : 's') + ' at the ' + money(nw.pace) + '-a-month pace' : 'Already past the ' + money(nw.target) + ' target — raise it on the Net worth page') + '</p><p style="margin:0"><a class="btn small ghost" href="#/networth">Set your target</a></p></div></div>';
+
   root.innerHTML =
     (state.sample ? '<div class="sample-note"><strong>Sample household loaded</strong> — the Hartono family’s November budget. Edit or delete anything, or press <strong>Reset sample data</strong> to start clean.</div>' : '')
     + '<div class="page-head"><div><h1>Your month at a glance</h1><p class="muted">' + monthLabel(key) + ' · Two incomes, two kids, one plan. Here is where the household stands right now.</p></div>'
@@ -217,6 +222,7 @@ export function renderDashboard(state, root) {
     + subStrip
     + fcStrip
     + revStrip
+    + nwStrip
     + (grocList.length ? '<div class="card" style="margin-top:16px"><h2>Groceries &amp; meals <a href="#/grocery">Plan &amp; list →</a></h2><p style="margin-top:0">Dinner is planned for all 7 nights this week. The grocery list stands at <b>' + money(grocToBuy) + ' still to buy</b> — ' + grocLeft + ' of ' + grocList.length + ' items left, ' + money(grocTotal) + ' in total. Tick items off in the store, then post the shop into Transactions with one press.</p></div>' : '');
   drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
 }
@@ -228,14 +234,22 @@ export function renderTransactions(state, root, filter) {
   if (f.cat !== 'all') list = list.filter((t) => t.category === f.cat);
   if (f.kind !== 'all') list = list.filter((t) => t.kind === f.kind);
   if (f.q) { const q = f.q.toLowerCase(); list = list.filter((t) => (t.description + ' ' + (t.note || '')).toLowerCase().includes(q)); }
+  if (typeof f.who === 'string' && f.who !== 'all') list = list.filter((t) => (t.who || '') === f.who);
   const t = monthTotals(state, key);
+  // What the filters leave behind, added up — so a search for one
+  // person or one category answers its own question in dollars.
+  let fIncome = 0, fExpense = 0;
+  for (const tx of list) { if (tx.kind === 'income') fIncome += tx.amount; else fExpense += tx.amount; }
   const catOptions = ['<option value="all">All categories</option>'].concat(CATEGORIES.map((c) => '<option value="' + c.id + '"' + (f.cat === c.id ? ' selected' : '') + '>' + esc(c.label) + '</option>')).join('');
+  const whoOptions = ['<option value="all">Everyone</option>', '<option value=""' + (f.who === '' ? ' selected' : '') + '>Household (shared)</option>'].concat((state.allowances || []).map((a) => '<option value="' + a.id + '"' + (f.who === a.id ? ' selected' : '') + '>' + esc(a.who) + '</option>')).join('');
   root.innerHTML =
     '<div class="page-head"><div><h1>Transactions</h1><p class="muted">' + monthLabel(key) + ' · ' + list.length + ' shown · Income ' + money(t.income) + ' · Spent ' + money(t.expense) + ' · Saved ' + money(t.saved) + '</p></div>'
     + '<div><button class="btn primary" id="btn-add-tx">+ Add transaction</button> <button class="btn ghost" id="btn-export">Export CSV</button></div></div>'
     + '<div class="card"><div class="toolbar"><input type="search" id="f-q" placeholder="Search transactions…" value="' + esc(f.q) + '" aria-label="Search transactions">'
     + '<select id="f-cat" aria-label="Filter by category">' + catOptions + '</select>'
-    + '<select id="f-kind" aria-label="Filter by type"><option value="all"' + (f.kind === 'all' ? ' selected' : '') + '>Income + expenses</option><option value="income"' + (f.kind === 'income' ? ' selected' : '') + '>Income only</option><option value="expense"' + (f.kind === 'expense' ? ' selected' : '') + '>Expenses only</option></select></div>'
+    + '<select id="f-kind" aria-label="Filter by type"><option value="all"' + (f.kind === 'all' ? ' selected' : '') + '>Income + expenses</option><option value="income"' + (f.kind === 'income' ? ' selected' : '') + '>Income only</option><option value="expense"' + (f.kind === 'expense' ? ' selected' : '') + '>Expenses only</option></select>'
+    + '<select id="f-who" aria-label="Filter by household member">' + whoOptions + '</select></div>'
+    + '<p class="muted small" style="margin:8px 0 0">Filtered: <b>' + list.length + ' transaction' + (list.length === 1 ? '' : 's') + '</b> · income ' + money(fIncome) + ' · spent ' + money(fExpense) + (f.who === '' ? ' · household (shared) spending — nobody’s pocket money' : (f.who && f.who !== 'all' ? ' · ' + esc((state.allowances || []).find((a) => a.id === f.who)?.who || '') + '’s spending this month' : '')) + '</p>'
     + (list.length ? '<table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="hide-m">Note</th><th class="amount">Amount</th><th></th></tr></thead><tbody>'
       + list.map((tx) => {
           const cat = categoryById(tx.category);

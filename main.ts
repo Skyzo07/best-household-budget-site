@@ -32,7 +32,12 @@
 // the same input files always produce the same output bytes.
 // v10 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
 // members.js, savings.js, envelopes.js, subscriptions.js, forecast.js
-// and review.js.
+// and review.js. v11 adds networth.js (lazy too): what the household
+// owns minus what it owes, from its own records, with an editable
+// net-worth target measured against the pace it actually kept — plus
+// a Transactions member filter (who spent it) in the first-load views,
+// and a net-worth strip on the Dashboard. v11 first load: 6 files,
+// 38,569 bytes gzip-9.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

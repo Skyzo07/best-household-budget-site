@@ -263,6 +263,20 @@ tr.month-detail td { background: #f4f7f4; font-size: .92rem; }
   .env-grid { grid-template-columns: 1fr; }
 }
 
+/* ---- net worth (v11): month-by-month bars across a zero line ---- */
+.nw-chart { margin-top: 12px; }
+.nw-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+.nw-month { width: 34px; flex: none; }
+.nw-track { position: relative; flex: 1; height: 18px; background: #f4f7f4; border-radius: 4px; }
+.nw-zero { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #5d6d64; }
+.nw-bar { position: absolute; top: 3px; bottom: 3px; border-radius: 3px; }
+.nw-bar.pos { background: #1d6b4f; }
+.nw-bar.neg { background: #b3382e; }
+.nw-val { width: 110px; flex: none; text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) {
+  .nw-val { width: 92px; }
+}
+
 /* ---- print: only the monthly summary ---- */
 @media print {
   .topbar, .foot, .btn, .month-switch, #tx-dialog, #goal-dialog, #bill-dialog, #rule-dialog, #debt-dialog, #groc-dialog, #member-dialog { display: none !important; }

@@ -16,6 +16,11 @@ account, no server, nothing leaves your browser. Built for the make.fun
   strip, a year-so-far strip and per-person pocket-money allowances.
 - **Transactions** — add, edit and delete income and expenses; search and
   filter by category and type; switch months to see any month's figures.
+  **Filter by who spent it** — Everyone, Household (shared), or one person
+  (Maya, Daniel, Sofia, Liam) — and the page adds the filtered list up
+  underneath: Sofia's November is 1 transaction, $24.50 spent; the shared
+  household is 20 transactions, $2,969.74 spent; search "groceries" still
+  narrows to the 4 weekly shops.
 - **Budgets** — a monthly limit per category with live progress bars and
   over-budget / almost-there alerts; limits save as you type. Every
   category also carries a six-month spending sparkline against its
@@ -39,6 +44,27 @@ account, no server, nothing leaves your browser. Built for the make.fun
   it the biggest single purchase at once — and the whole story moves.
   The Dashboard shows the year at a glance with the saving target
   and the pace beside it.
+- **Net worth** — what the household owns minus what it owes, worked out
+  live from its own records and nothing else: the cash it kept, month by
+  month (income minus spending, January to November: **$30,177.76**),
+  minus the three debts at their current balance (**$10,100.00**), for a
+  net worth of **$20,077.76**. The page shows where the kept cash sits —
+  unassigned in the main account $21,225.35, savings goals $7,480.00,
+  cash in envelopes $1,213.81, 52-week challenge $210.00, round-up pot
+  $48.60 — and the debts one by one (the car loan is 83% of everything
+  owed). A month-by-month chart across a zero line tells the story:
+  net worth started January $7,438.00 under water and **turned positive
+  in April 2026**, the fourth month. An **editable net-worth target**
+  (default: the next $5,000 milestone, $25,000) is measured against the
+  pace actually kept ($2,743.43 a month) with the month it lands on —
+  January 2027, 2 months from now; type $30,000 and it moves to March
+  2027. "Aim for $25,000" sets the target in one press, "Back to the
+  next milestone" clears it. Add a $500 grocery shop anywhere and net
+  worth falls $500 at once, to $19,577.76. The Dashboard carries the
+  net worth at a glance, with the target date beside it. The page says
+  plainly what it does not count — the car, the furniture, the house —
+  because the app holds no values for them: this is the cash net worth,
+  the number the budget can actually move.
 - **Bills & recurring** — every regular bill with its due date and a paid
   toggle (paid / overdue / due-in-days), an upcoming-month total, and
   recurring rules that post one real transaction into the current month
@@ -240,10 +266,10 @@ to the output directory and writes `dossier.json` with the vendored
 
 ## Screenshots
 
-- `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip and the new 2026-in-review strip (desktop, 1280×800)
-- `screenshots/2-review.png` — Year in review: 2026 story, biggest single purchase, month-by-month table and the three editable 2027 targets (desktop, 1280×800)
-- `screenshots/3-bills.png` — Bills & recurring: bill calendar plus the new twelve-month year-at-a-glance grid (desktop, 1280×800)
-- `screenshots/4-members-phone.png` — Household members on a phone (390×844): all four members and their allowances
+- `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
+- `screenshots/2-networth.png` — Net worth: $20,077.76, what the household owns split by where it sits, what it owes, and the month it turned positive (desktop, 1280×800)
+- `screenshots/3-review.png` — Year in review: 2026 story, biggest single purchase, month-by-month table and the three editable 2027 targets (desktop, 1280×800)
+- `screenshots/4-transactions-phone.png` — Transactions on a phone (390×844): search, category/type/member filters and the filtered totals
 
 ## License
 

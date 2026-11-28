@@ -4,7 +4,7 @@ import { loadState, saveState, sampleState, CATEGORIES, categoryById, money, mon
 import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights } from './views.js';
 
 let state = loadState();
-let txFilter = { q: '', cat: 'all', kind: 'all' };
+let txFilter = { q: '', cat: 'all', kind: 'all', who: 'all' };
 let editingTxId = null;
 let editingGoalId = null;
 
@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -49,6 +49,7 @@ async function showView(route) {
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   if (route === 'forecast') (await import('./forecast.js')).renderForecast(state, root);
   if (route === 'review') (await import('./review.js')).renderReview(state, root);
+  if (route === 'networth') (await import('./networth.js')).renderNetworth(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -70,6 +71,12 @@ async function renderForecastLive() {
 async function renderReviewLive() {
   if (currentRoute() !== 'review') return;
   (await import('./review.js')).renderReview(state, $('#view-review'));
+}
+
+// Re-render just the Net worth view (used while typing a target).
+async function renderNetworthLive() {
+  if (currentRoute() !== 'networth') return;
+  (await import('./networth.js')).renderNetworth(state, $('#view-networth'));
 }
 
 function persist() { saveState(state); }
@@ -380,6 +387,27 @@ app.addEventListener('click', async (e) => {
     state.review2027.save = 0;
     state.review2027.groceries = 0;
     state.review2027.dining = 0;
+    state.sample = false;
+    persist();
+    rerender();
+    return;
+  }
+  // ---- Net worth target (v11) ----
+  const nwAimBtn = t.closest('[data-nw-aim]');
+  if (nwAimBtn) {
+    const data = await import('./data.js');
+    const s = data.networthSummary(state);
+    if (!state.networth || typeof state.networth !== 'object') state.networth = { target: 0 };
+    state.networth.target = s.net < 25000 ? 25000 : s.milestone;
+    state.sample = false;
+    persist();
+    rerender();
+    window.alert('Net-worth target set to ' + money(state.networth.target) + ' — at the current pace it lands in ' + monthLabel(data.networthSummary(state).targetKey) + '.');
+    return;
+  }
+  if (t.closest('[data-nw-reset]')) {
+    if (!state.networth || typeof state.networth !== 'object') state.networth = { target: 0 };
+    state.networth.target = 0;
     state.sample = false;
     persist();
     rerender();
@@ -773,7 +801,8 @@ app.addEventListener('input', (e) => {
   if (t.id === 'f-q') { txFilter.q = t.value; }
   if (t.id === 'f-cat') { txFilter.cat = t.value; }
   if (t.id === 'f-kind') { txFilter.kind = t.value; }
-  if (t.id === 'f-q' || t.id === 'f-cat' || t.id === 'f-kind') {
+  if (t.id === 'f-who') { txFilter.who = t.value; }
+  if (t.id === 'f-q' || t.id === 'f-cat' || t.id === 'f-kind' || t.id === 'f-who') {
     const keepFocus = t.id;
     renderTransactions(state, $('#view-transactions'), txFilter);
     const el = document.getElementById(keepFocus);
@@ -865,6 +894,19 @@ app.addEventListener('input', (e) => {
       if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
     }
   }
+  if (t.dataset && t.dataset.nwTarget !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      if (!state.networth || typeof state.networth !== 'object') state.networth = { target: 0 };
+      state.networth.target = v;
+      state.sample = false;
+      persist();
+      const pos = t.selectionStart;
+      renderNetworthLive();
+      const el = document.querySelector('[data-nw-target]');
+      if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+    }
+  }
   if (t.dataset && t.dataset.reviewTarget !== undefined) {
     const v = Number(t.value);
     if (Number.isFinite(v) && v >= 0) {
@@ -883,7 +925,7 @@ app.addEventListener('input', (e) => {
   }
 });
 app.addEventListener('change', (e) => {
-  if (e.target.id === 'f-cat' || e.target.id === 'f-kind') rerender();
+  if (e.target.id === 'f-cat' || e.target.id === 'f-kind' || e.target.id === 'f-who') rerender();
   if (e.target.dataset && e.target.dataset.envFill) { rerender(); return; }
   if (e.target.dataset && e.target.dataset.grocCheck) {
     const item = state.grocery && state.grocery.list.find((x) => x.id === e.target.dataset.grocCheck);

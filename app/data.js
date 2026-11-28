@@ -370,11 +370,12 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 10,
+    version: 11,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
     review2027: { save: 0, groceries: 0, dining: 0 },
+    networth: { target: 0 },
     budgets,
     goals: [
       { id: 'goal-emergency', name: 'Emergency fund', target: 6000, saved: 4350, date: '2027-06-30' },
@@ -401,7 +402,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV10(parsed);
+    return ensureV11(parsed);
   } catch {
     return sampleState();
   }
@@ -615,6 +616,90 @@ export function reviewStore(state) {
     if (typeof state.review2027[k] !== 'number' || state.review2027[k] < 0) state.review2027[k] = 0;
   }
   return state.review2027;
+}
+
+// Fill v11 fields into an older saved state so v1–v10 saves keep working.
+// v11 adds the net-worth goal (0 = not set yet, the page falls back to
+// the next $5,000 milestone above the household's current net worth).
+// The version bump records that the save has been seen by v11 code.
+export function ensureV11(state) {
+  if (!state) return sampleState();
+  ensureV10(state);
+  networthStore(state);
+  state.version = 11;
+  return state;
+}
+
+export function networthStore(state) {
+  if (!state.networth || typeof state.networth !== 'object') state.networth = { target: 0 };
+  if (typeof state.networth.target !== 'number' || state.networth.target < 0) state.networth.target = 0;
+  return state.networth;
+}
+
+// The 52-week challenge's saved total, worked out from its own paid
+// weeks — the same maths as savings.js, kept here so the net-worth
+// page can use it without a circular import.
+function challengeSavedAmount(state) {
+  const c = state.challenges && state.challenges.fiftyTwo;
+  if (!c || !Array.isArray(c.paid)) return 0;
+  const mode = c.mode || 'grow';
+  let s = 0;
+  for (const w of c.paid) s += mode === 'reverse' ? 53 - w : mode === 'flat' ? 10 : w;
+  return s;
+}
+
+// ---- Net worth (v11) ----
+// What the household owns, minus what it owes — all from its own
+// records, nothing typed in by hand. "Cash kept" is the money that
+// stayed in the household month by month (income minus spending,
+// January through the month being viewed): that is the asset, and the
+// page shows where it sits — in savings goals, in the 52-week
+// challenge, in the round-up pot, in the cash envelopes, and the rest
+// unassigned in the main account. Liabilities are the debts at their
+// current balance; the trend holds them flat because no debt payment
+// is recorded in Transactions yet — record one and they fall.
+export function networthSummary(state) {
+  const year = state.currentMonth.slice(0, 4);
+  const curMonth = Number(state.currentMonth.slice(5, 7));
+  const keys = [];
+  for (let m = 1; m <= curMonth; m++) keys.push(year + '-' + String(m).padStart(2, '0'));
+  const debts = (state.debts || []).map((d) => ({
+    id: d.id, name: d.name, balance: Math.max(0, Number(d.balance) || 0),
+    apr: Number(d.apr) || 0, min: Number(d.minPayment) || 0,
+  }));
+  const liabilities = Math.round(debts.reduce((a, d) => a + d.balance, 0) * 100) / 100;
+  let cum = 0;
+  const months = keys.map((k) => {
+    const t = monthTotals(state, k);
+    cum = Math.round((cum + t.saved) * 100) / 100;
+    return {
+      key: k, label: monthLabel(k), short: monthLabel(k).split(' ')[0].slice(0, 3),
+      saved: Math.round(t.saved * 100) / 100, assets: cum,
+      net: Math.round((cum - liabilities) * 100) / 100,
+    };
+  });
+  const n = months.length || 1;
+  const assets = months.length ? months[months.length - 1].assets : 0;
+  const net = Math.round((assets - liabilities) * 100) / 100;
+  const pace = Math.round((assets / n) * 100) / 100;
+  const goalTotal = Math.round((state.goals || []).reduce((a, g) => a + (Number(g.saved) || 0), 0) * 100) / 100;
+  const chSaved = challengeSavedAmount(state);
+  const pot = Math.round(((state.challenges && state.challenges.roundUp && Number(state.challenges.roundUp.pot)) || 0) * 100) / 100;
+  const envLeft = Math.round(envelopeTotals(state, state.currentMonth).left * 100) / 100;
+  const unassigned = Math.round((assets - goalTotal - chSaved - pot - envLeft) * 100) / 100;
+  const firstPositive = months.find((r) => r.net > 0) || null;
+  const store = networthStore(state);
+  const milestone = (Math.floor(net / 5000) + 1) * 5000;
+  const target = store.target > 0 ? store.target : milestone;
+  const gap = Math.round((target - net) * 100) / 100;
+  const monthsTo = gap <= 0 ? 0 : (pace > 0 ? Math.ceil(gap / pace) : -1);
+  const targetKey = monthsTo > 0 ? shiftMonth(state.currentMonth, monthsTo) : (gap <= 0 ? state.currentMonth : null);
+  const debtShare = liabilities ? debts.map((d) => ({ ...d, share: Math.round(d.balance / liabilities * 1000) / 10 })) : debts.map((d) => ({ ...d, share: 0 }));
+  return {
+    year, keys, months, n, assets, liabilities, net, pace, debts: debtShare,
+    goalTotal, chSaved, pot, envLeft, unassigned, firstPositive,
+    target, milestone, gap, monthsTo, targetKey, targetSet: store.target > 0,
+  };
 }
 
 // Fill v10 fields into an older saved state so v1–v9 saves keep working.
