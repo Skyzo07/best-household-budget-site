@@ -138,6 +138,31 @@ account, no server, nothing leaves your browser. Built for the make.fun
   $25,000.00 needs $4,922.24, landing January 2027 at the pace kept).
   The subscription audit's $491.34 a year is named as one more win on
   the table, with a link to the audit.
+- **Monthly money meeting (v17)** — once a month, around the table. The
+  page builds the agenda itself from the household's own records: six
+  wins (11 of 11 months inside the $3,800.00 plan, net worth positive
+  since April 2026, the 52-week challenge at 20 weeks and $210.00, the
+  auto-save rules' $1,894.60, an 8-day no-spend streak, February the
+  best month at $2,857.00 saved) and five flags with a number on each
+  (groceries used $619.35 of $620.00 — 65 cents of slack; week 2 ran
+  $285.86 over its flexible share; car insurance $95.00 and home
+  insurance $68.00 past their due days; Duolingo Plus and National
+  Geographic flagged to cancel, $239.76 a year; the credit card still
+  owes $1,250.00 at 19.9% APR). Eight decisions sit on the table, and
+  saying **Yes — do it** does the thing at once: cancelling Duolingo
+  Plus stops $155.88 a year, downgrading Google One halves it, raising
+  the debt extra to $100 a month moves the debt-free date from March
+  2030 to September 2029 ($207.25 less interest), moving $100 from the
+  holiday fund puts the washing machine at $340.00, paying week 21
+  takes the challenge to 21 weeks — and the page each one lands on
+  already shows it. Notes save as you type, the meeting marks done,
+  and the next meeting is the first Sunday of next month (Dec 6, 2026).
+- **Monthly statement (v17, on Reports)** — every transaction of the
+  month in the order it happened, with a running balance that starts at
+  $0.00 on the 1st and ends at the month's saved figure ($2,791.51 in
+  November, the same number the summary shows), plus spending by
+  category and a sign-off line ("Checked by ____ on ____"). **Print the
+  statement** prints just the statement, alone on the paper.
 - **Auto-save rules (v16)** — money that moves itself. Four standing
   rules, every figure worked out from the household's own records.
   **Payday: $100.00 to the emergency fund** on the 1st — 11 runs,
@@ -459,9 +484,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-autosave.png` — Auto-save rules: $1,894.60 auto-saved in 2026, $230.00 moved in November, 4 of 4 rules active, next run Nov 30, 2026 (round-ups $5.51), and the first rule card — payday $100.00 to the emergency fund, next run Dec 1, 2026, $1,100.00 over 11 runs (desktop, 1280×800)
-- `screenshots/3-forecast.png` — Forecast for December 2026: Trend / 6-month average / Budget plan switcher, projected income $5,766.67, projected spending $3,109.67, projected month-end $2,657.00, $31,884.00 saved across 2027 at this pace (desktop, 1280×800)
-- `screenshots/4-autosave-phone.png` — Auto-save rules on a phone (390×844): the nav, the month switcher and the rules in the phone layout
+- `screenshots/2-meeting.png` — Monthly money meeting: $5,850.00 in for November, 0 of 8 decisions made, 6 wins and 5 flags, and the first decisions — cancel Duolingo Plus ($155.88 a year) and National Geographic ($83.88 a year) (desktop, 1280×800)
+- `screenshots/3-reports.png` — Reports, scrolled to the monthly statement: all 23 November transactions in order with a running balance ending at $2,791.51 saved, spending by category, and the sign-off line (desktop, 1280×800)
+- `screenshots/4-budgets-phone.png` — Budgets on a phone (390×844): the nav, the month switcher and the category bars in the phone layout
 
 ## License
 

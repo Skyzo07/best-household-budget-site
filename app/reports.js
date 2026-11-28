@@ -69,9 +69,26 @@ export function renderReports(state, root) {
       + '<td class="amount">' + (sim ? money(sim.interest) : '—') + '</td></tr>';
   }).join('');
 
+  // ---- Monthly statement (v17): every transaction of the month in
+  // the order it happened, with a running balance. The balance starts
+  // at $0.00 on the 1st — it is the month's own cash flow (money in
+  // minus money out), not a bank balance — and it ends at the month's
+  // saved figure, which is the same number the summary above shows.
+  const monthTx = state.transactions
+    .filter((tx) => tx.date.slice(0, 7) === key)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date) || a.description.localeCompare(b.description));
+  let running = 0;
+  const stmtRows = monthTx.map((tx) => {
+    running = Math.round((running + (tx.kind === 'income' ? tx.amount : -tx.amount)) * 100) / 100;
+    return '<tr><td>' + esc(tx.date) + '</td><td>' + esc(tx.description) + '</td><td>' + esc(categoryById(tx.category).label) + '</td><td class="amount">' + (tx.kind === 'income' ? money(tx.amount) : '—') + '</td><td class="amount">' + (tx.kind === 'expense' ? money(tx.amount) : '—') + '</td><td class="amount"><b>' + money(running) + '</b></td></tr>';
+  }).join('');
+  const stmtCatRows = Object.entries(spend).sort((a, b) => b[1] - a[1]).map(([id, v]) => '<tr><td><span class="cat-dot" style="background:' + categoryById(id).color + '"></span>' + esc(categoryById(id).label) + '</td><td class="amount">' + money(v) + '</td></tr>').join('');
+  const printedOn = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
   root.innerHTML =
     '<div class="page-head"><div><h1>Reports</h1><p class="muted">A plain-language summary of ' + monthName(key) + ' you can print, and a payoff plan for what the household owes.</p></div>'
-    + '<div><button class="btn primary" id="btn-print">Print monthly summary</button></div></div>'
+    + '<div><button class="btn primary" id="btn-print">Print monthly summary</button> <button class="btn" id="btn-print-statement">Print the statement</button></div></div>'
     + '<div id="print-summary"><div class="card"><h2>Monthly summary — ' + monthName(key) + '</h2>'
     + '<p><strong>Income ' + money(t.income) + '</strong> · <strong>Spent ' + money(t.expense) + '</strong> · <strong>Saved ' + money(t.saved) + '</strong> (' + (t.income ? (t.saved / t.income * 100).toFixed(1) : '0') + '% of income). '
     + 'Spending moved ' + (prev.expense ? ((t.expense - prev.expense) / prev.expense * 100).toFixed(1) : '0') + '% vs ' + monthLabel(shiftMonth(key, -1)) + '. '
@@ -81,6 +98,11 @@ export function renderReports(state, root) {
     + '<div><h3>Spending vs budget</h3><table><thead><tr><th>Category</th><th class="amount">Budget</th><th class="amount">Spent</th><th class="amount">Left</th></tr></thead><tbody>' + spendRows + '<tr><td><b>Total</b></td><td class="amount"><b>' + money(totalBudget) + '</b></td><td class="amount"><b>' + money(t.expense) + '</b></td><td class="amount"><b>' + money(totalBudget - t.expense) + '</b></td></tr></tbody></table></div></div>'
     + '<canvas id="chart-report" class="chart" height="180" style="margin-top:12px"></canvas>'
     + '<p class="muted small">Hearth &amp; Home Budget · Hartono household · figures from your own records, printed ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '.</p></div></div>'
+    + '<div class="card" id="statement-card" style="margin-top:16px"><h2>Monthly statement — ' + monthName(key) + '</h2>'
+    + '<p class="muted">Every transaction of the month, in the order it happened, with a running balance. The balance starts at $0.00 on the 1st — it is the month’s own cash flow, money in minus money out, not a bank balance — and it ends at the month’s saved figure, the same number the summary above shows. Print just this statement with the button at the top of the page.</p>'
+    + '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="amount">In</th><th class="amount">Out</th><th class="amount">Balance</th></tr></thead><tbody>' + stmtRows + '<tr><td></td><td><b>Month total</b></td><td></td><td class="amount"><b>' + money(t.income) + '</b></td><td class="amount"><b>' + money(t.expense) + '</b></td><td class="amount"><b>' + money(t.saved) + '</b></td></tr></tbody></table></div>'
+    + '<div class="grid two-even" style="margin-top:14px"><div><h3>Spending by category</h3><table><thead><tr><th>Category</th><th class="amount">Spent</th></tr></thead><tbody>' + stmtCatRows + '<tr><td><b>Total</b></td><td class="amount"><b>' + money(t.expense) + '</b></td></tr></tbody></table></div>'
+    + '<div><h3>Sign-off</h3><p>Checked by ____________________ on ' + printedOn + '.</p><p>The totals above agree with the monthly summary: income ' + money(t.income) + ', spent ' + money(t.expense) + ', saved ' + money(t.saved) + ' (' + (t.income ? (t.saved / t.income * 100).toFixed(1) : '0') + '% of income). ' + overCats.length + ' categor' + (overCats.length === 1 ? 'y' : 'ies') + ' over budget (' + (overCats.map((c) => esc(c.label)).join(', ') || 'none') + '), ' + billsPaid + ' of ' + billsTotal + ' bills paid.</p><p class="muted small">Hearth &amp; Home Budget · Hartono household · ' + monthTx.length + ' transactions in ' + monthName(key) + '.</p></div></div></div>'
     + '<div class="card" style="margin-top:16px"><h2>Debt payoff planner — ' + method + ' method</h2>'
     + '<p class="muted">Total owed: <b>' + money(totalDebt) + '</b> across ' + debts.length + ' debts · minimums add up to <b>' + money(minTotal) + ' a month</b>. The plan pays the minimum on everything, then throws every spare dollar at one target debt until it clears. Pick the method — the comparison below shows what the other one would cost.</p>'
     + '<p><button class="btn small' + (method === 'avalanche' ? ' primary' : ' ghost') + '" data-payoff-method="avalanche">Avalanche — highest APR first</button> <button class="btn small' + (method === 'snowball' ? ' primary' : ' ghost') + '" data-payoff-method="snowball">Snowball — smallest balance first</button></p>'

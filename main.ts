@@ -99,6 +99,20 @@
 // lazy); whole app 24 files, 455,462 bytes. Verified:
 // /tmp/bhb-v16-verify.mjs, 110/110 checks PASS, 0 JS errors,
 // 0 external requests.
+// v17 adds meeting.js (lazy too): a monthly money meeting — an
+// auto-generated agenda from the month's own figures (six wins, the
+// flags with a number on each, eight decisions that do real work
+// when the household says yes: cancel or downgrade a subscription,
+// raise the debt extra, move $100 toward the washing machine, pay
+// the next 52-week week), notes that save as you type, a mark-done
+// button and the next meeting on the first Sunday of next month —
+// plus a printable monthly statement on the Reports page (every
+// transaction in order with a running balance, category totals and
+// a sign-off line, printed alone). v17 first load: 6 files,
+// 48,079 bytes gzip-9 (target ≤ ~56 KB); later by import() 18 files,
+// 93,484 bytes gzip-9 (meeting.js 7,988 lazy); whole app 25 files,
+// 493,907 bytes. Verified: /tmp/bhb-v17-verify.mjs, 123/123 checks
+// PASS, 0 JS errors, 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

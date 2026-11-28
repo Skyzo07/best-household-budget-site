@@ -135,7 +135,8 @@ td .pos { color: var(--green); font-weight: 700; }
 .toolbar input[type="search"], .toolbar select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
 .toolbar input[type="search"] { flex: 1; min-width: 160px; }
 label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: 10px; }
-label input, label select { display: block; width: 100%; margin-top: 4px; font: inherit; font-weight: 400; padding: 9px 10px; border: 1px solid #b9c6ba; border-radius: 9px; background: #fff; }
+label input, label select, label textarea { display: block; width: 100%; margin-top: 4px; font: inherit; font-weight: 400; padding: 9px 10px; border: 1px solid #b9c6ba; border-radius: 9px; background: #fff; }
+label textarea { resize: vertical; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form-error { color: var(--red); font-weight: 700; font-size: .9rem; }
 dialog { border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; width: min(520px, 92vw); box-shadow: 0 18px 50px rgba(0,0,0,.25); }
@@ -295,6 +296,17 @@ tr.month-detail td { background: #f4f7f4; font-size: .92rem; }
   body { background: #fff; }
   .card { box-shadow: none; }
 }
+/* v17 — print only the monthly statement: the "Print the statement"
+button adds print-statement-only to the body, and afterprint takes
+it off again, so the summary, the payoff planner and the chrome all
+stay off the paper and the statement prints alone. */
+@media print {
+  body.print-statement-only header, body.print-statement-only footer, body.print-statement-only .page-head { display: none !important; }
+  body.print-statement-only #app .card:not(#statement-card) { display: none !important; }
+  body.print-statement-only #statement-card { border: none; }
+  body.print-statement-only .table-scroll { overflow: visible; }
+  .no-print { display: none !important; }
+}
 
 /* ---- responsive ---- */
 @media (max-width: 900px) {
@@ -319,3 +331,17 @@ tr.month-detail td { background: #f4f7f4; font-size: .92rem; }
 /* v16 — auto-save rules and bill auto-pay switches. An "on" switch
 reads green so a glance down the bills table shows what pays itself. */
 .icon-btn.on { background: var(--green-soft); border-color: var(--green); color: var(--green-deep); font-weight: 700; }
+
+/* v17 — meeting wins/flags rows. Their titles wrap (the shared
+.tx-list keeps titles on one line with an ellipsis, which would force
+the card wider than a phone), and the statement table scrolls
+sideways on a narrow screen instead of pushing the page wide. */
+.mt-row { display: flex; gap: 12px; padding: 10px 2px; border-bottom: 1px solid #edf1ed; }
+.mt-row:last-child { border-bottom: 0; }
+.mt-body { flex: 1; min-width: 0; }
+.mt-body b { display: block; }
+.mt-body span { display: block; font-size: .83rem; color: var(--muted); }
+.mt-ico { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 1.15rem; flex: none; }
+.mt-ico.good { background: #1d6b4f22; color: #1d6b4f; }
+.mt-ico.flag { background: #b3382e22; color: #b3382e; }
+.table-scroll { overflow-x: auto; }

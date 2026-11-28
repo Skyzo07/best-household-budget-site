@@ -492,6 +492,69 @@ export function autosaveStore(state) {
   return state.autosave;
 }
 
+// ---- Monthly money meeting (v17) ----
+// One record per month: the decisions the household made at its money
+// meeting, a free-form note, the date the meeting was held, and the
+// date of the next one. The decisions themselves are generated live
+// on the Meeting page from the month's own figures (which
+// subscriptions the audit flags, what the debt plan costs, what the
+// big purchases still need) — the record only stores the choice the
+// household made for each one, so a decision can never disagree with
+// the figures it was made from. The November seed is the first
+// meeting in the new format: nothing decided yet, one line of notes,
+// and the next meeting on the first Sunday of December.
+export function sampleMeetings() {
+  return {
+    '2026-11': {
+      decisions: {},
+      notes: 'First meeting in the new format — Maya chairs, Daniel brings the bills, Sofia and Liam get ten minutes on their own challenges.',
+      doneOn: '',
+      nextDate: '2026-12-06',
+    },
+  };
+}
+
+// The meeting records, filled in for an older save. A record missing
+// a field gets the empty version of it — a month with no meeting yet
+// is a blank agenda, never a broken page.
+export function meetingStore(state) {
+  if (!state.meetings || typeof state.meetings !== 'object') state.meetings = sampleMeetings();
+  for (const k of Object.keys(state.meetings)) {
+    const m = state.meetings[k];
+    if (!m || typeof m !== 'object') { state.meetings[k] = { decisions: {}, notes: '', doneOn: '', nextDate: '' }; continue; }
+    if (!m.decisions || typeof m.decisions !== 'object') m.decisions = {};
+    if (typeof m.notes !== 'string') m.notes = '';
+    if (typeof m.doneOn !== 'string') m.doneOn = '';
+    if (typeof m.nextDate !== 'string') m.nextDate = '';
+  }
+  return state.meetings;
+}
+
+// This month's meeting record — created blank when the month has
+// never met, so the page always has somewhere to write.
+export function meetingForMonth(state, key) {
+  const store = meetingStore(state);
+  if (!store[key] || typeof store[key] !== 'object') store[key] = { decisions: {}, notes: '', doneOn: '', nextDate: '' };
+  const m = store[key];
+  if (!m.decisions || typeof m.decisions !== 'object') m.decisions = {};
+  if (typeof m.notes !== 'string') m.notes = '';
+  if (typeof m.doneOn !== 'string') m.doneOn = '';
+  if (typeof m.nextDate !== 'string') m.nextDate = '';
+  return m;
+}
+
+// Fill v17 fields into an older saved state so v1–v16 saves keep working.
+// v17 adds the monthly money meeting records (empty = no meeting held
+// yet, the page falls back to the November seed). The version bump
+// records that the save has been seen by v17 code.
+export function ensureV17(state) {
+  if (!state) return sampleState();
+  ensureV16(state);
+  meetingStore(state);
+  state.version = 17;
+  return state;
+}
+
 // Fill v16 fields into an older saved state so v1–v15 saves keep working.
 // v16 adds the auto-save rules (four sample rules) and the auto-pay
 // switch on every bill (off for older saves — a bill only pays itself
@@ -549,7 +612,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 16,
+    version: 17,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -575,6 +638,7 @@ export function sampleState() {
     checkins: sampleCheckins(),
     bigbuys: sampleBigBuys(),
     autosave: sampleAutoSave(),
+    meetings: sampleMeetings(),
     // Banked unspent allowance (v15): what each person already moved
     // into savings — Maya $145, Daniel $40, Sofia $15, Liam $10, $210
     // between them, all into the emergency fund. The emergency fund's
@@ -598,7 +662,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV16(parsed);
+    return ensureV17(parsed);
   } catch {
     return sampleState();
   }

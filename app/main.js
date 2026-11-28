@@ -1,6 +1,6 @@
 // Hearth & Home Budget — app shell: routing, dialogs, add/edit/delete,
 // CSV export and reset. State lives in data.js and persists to localStorage.
-import { loadState, saveState, sampleState, CATEGORIES, categoryById, money, monthLabel, todayISO, uid, monthTransactions, memberChallengeStore } from './data.js';
+import { loadState, saveState, sampleState, CATEGORIES, categoryById, meetingForMonth, money, monthLabel, todayISO, uid, monthTransactions, memberChallengeStore } from './data.js';
 import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights, setInsightCat } from './views.js';
 
 let state = loadState();
@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -55,10 +55,17 @@ async function showView(route) {
   if (route === 'bigbuys') (await import('./bigbuys.js')).renderBigbuys(state, root);
   if (route === 'streaks') (await import('./streaks.js')).renderStreaks(state, root);
   if (route === 'autosave') (await import('./autosave.js')).renderAutosave(state, root);
+  if (route === 'meeting') (await import('./meeting.js')).renderMeeting(state, root);
   window.scrollTo(0, 0);
 }
 
 function rerender() { showView(currentRoute()); }
+
+// Re-render just the Meeting view (used after changing the next date).
+async function renderMeetingLive() {
+  if (currentRoute() !== 'meeting') return;
+  (await import('./meeting.js')).renderMeeting(state, $('#view-meeting'));
+}
 
 // Re-render just the Reports view (used while typing in the payoff planner).
 async function renderReportsLive() {
@@ -591,6 +598,36 @@ app.addEventListener('click', async (e) => {
     else window.alert('That rule is missing something — give it a name, pick a destination, and (for a fixed rule) an amount above $0.');
     return;
   }
+  // ---- Monthly money meeting (v17): decisions, done, reopen ----
+  const mtDecideBtn = t.closest('[data-mt-decide]');
+  if (mtDecideBtn) {
+    const mt = await import('./meeting.js');
+    const [id, choice] = mtDecideBtn.dataset.mtDecide.split(':');
+    const res = mt.applyDecision(state, id, choice);
+    persist();
+    rerender();
+    if (!res.changed && res.choice) window.alert('That decision is already set to “' + res.choice + '” — pick another one to change it.');
+    else if (res.changed && res.effect) window.alert(res.effect + (choice === 'yes' ? ' The decision is recorded on the meeting page.' : ''));
+    else if (res.changed) window.alert('Recorded: ' + choice + '. Nothing moves on a no or a later — the question comes back at the next meeting.');
+    return;
+  }
+  if (t.closest('[data-mt-done]')) {
+    const m = meetingForMonth(state, state.currentMonth);
+    m.doneOn = todayISO();
+    state.sample = false;
+    persist();
+    rerender();
+    window.alert('Meeting done — ' + monthLabel(state.currentMonth) + '’s decisions are recorded. Next meeting: ' + (m.nextDate || 'the first Sunday of next month') + '.');
+    return;
+  }
+  if (t.closest('[data-mt-reopen]')) {
+    const m = meetingForMonth(state, state.currentMonth);
+    m.doneOn = '';
+    state.sample = false;
+    persist();
+    rerender();
+    return;
+  }
   // ---- Bills year grid: jump the month switcher to that month (v10) ----
   const gotoMonthBtn = t.closest('[data-bill-goto-month]');
   if (gotoMonthBtn) {
@@ -603,6 +640,11 @@ app.addEventListener('click', async (e) => {
     return;
   }
   if (t.id === 'btn-print') { window.print(); return; }
+  if (t.id === 'btn-print-statement') {
+    document.body.classList.add('print-statement-only');
+    window.print();
+    return;
+  }
   if (t.id === 'btn-post-due') {
     const bills = await import('./bills.js');
     const posted = bills.postAllDue(state, state.currentMonth);
@@ -1011,6 +1053,13 @@ app.addEventListener('click', async (e) => {
 // ---- Delegated inputs (filters + budget edits) ----
 app.addEventListener('input', (e) => {
   const t = e.target;
+  // Meeting notes save as you type — no re-render, so the cursor stays put.
+  if (t.id === 'mt-notes') {
+    meetingForMonth(state, state.currentMonth).notes = t.value;
+    state.sample = false;
+    persist();
+    return;
+  }
   if (t.id === 'f-q') { txFilter.q = t.value; }
   if (t.id === 'f-cat') { txFilter.cat = t.value; }
   if (t.id === 'f-kind') { txFilter.kind = t.value; }
@@ -1204,6 +1253,16 @@ app.addEventListener('input', (e) => {
   }
 });
 app.addEventListener('change', (e) => {
+  if (e.target.id === 'mt-next-date') {
+    const v = e.target.value;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      meetingForMonth(state, state.currentMonth).nextDate = v;
+      state.sample = false;
+      persist();
+      renderMeetingLive();
+    }
+    return;
+  }
   if (e.target.id === 'f-cat' || e.target.id === 'f-kind' || e.target.id === 'f-who') rerender();
   if (e.target.dataset && e.target.dataset.envFill) { rerender(); return; }
   if (e.target.dataset && e.target.dataset.grocCheck) {
@@ -1244,4 +1303,6 @@ $('#month-next').addEventListener('click', () => {
 });
 
 window.addEventListener('hashchange', () => showView(currentRoute()));
+// After printing only the statement, drop the print-only class again.
+window.addEventListener('afterprint', () => document.body.classList.remove('print-statement-only'));
 showView(currentRoute());
