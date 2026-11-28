@@ -149,6 +149,22 @@ export function renderDashboard(state, root) {
   const fcMonths = fcFund && fcGap > 0 && fcSaved > 0 ? Math.ceil(fcGap / fcSaved) : 0;
   const fcStrip = '<div class="card" style="margin-top:16px"><h2>Next month, on current form <a href="#/forecast">Full forecast →</a></h2><div class="savings-strip"><p style="margin:0">' + monthLabel(shiftMonth(key, 1)) + ' looks like income <b>' + money(fcInc) + '</b> against spending of about <b>' + money(fcSpend) + '</b> — roughly <b>' + money(fcSaved) + '</b> left over</p><p style="margin:0">' + (fcFund ? (fcGap <= 0 ? 'The ' + esc(fcFund.name) + ' is already fully funded.' : 'The ' + esc(fcFund.name) + ' still needs ' + money(fcGap) + (fcMonths ? ' — at this pace it fills in <b>' + monthLabel(shiftMonth(key, fcMonths)) + '</b>' : ' — and at this pace it has no date yet') + '.') : '') + '</p><p style="margin:0"><a class="btn small ghost" href="#/forecast">See the forecast</a></p></div></div>';
 
+  // Year in review at a glance (v10): the year so far in one line,
+  // and the 2027 targets the household set on the review page.
+  const revOver = (() => {
+    const totalBudget = Object.values(state.budgets).reduce((a, b) => a + b, 0);
+    let over = 0;
+    for (let m = 1; m <= curMonthNum; m++) {
+      const k = curYear + '-' + String(m).padStart(2, '0');
+      if (monthTotals(state, k).expense > totalBudget) over++;
+    }
+    return over;
+  })();
+  const revTargets = state.review2027 || { save: 0, groceries: 0, dining: 0 };
+  const revPace = curMonthNum ? Math.round((ytdSaved / curMonthNum) * 100) / 100 : 0;
+  const revSaveTarget = revTargets.save > 0 ? revTargets.save : Math.round(revPace);
+  const revStrip = '<div class="card" style="margin-top:16px"><h2>' + curYear + ' in review <a href="#/review">Year in review →</a></h2><div class="savings-strip"><p style="margin:0">Saved <b>' + money(ytdSaved) + '</b> in ' + curMonthNum + ' months · best month ' + monthLabel(bestYtd.key) + ' (' + money(bestYtd.saved) + ') · <b>' + (curMonthNum - revOver) + ' of ' + curMonthNum + ' months</b> inside the budget</p><p style="margin:0">2027 saving target: <b>' + money(revSaveTarget) + ' a month</b> · this year’s pace is ' + money(revPace) + ' a month ' + (revPace >= revSaveTarget ? '— on track ✓' : '— ' + money(Math.round((revSaveTarget - revPace) * 100) / 100) + ' a month short') + '</p><p style="margin:0"><a class="btn small ghost" href="#/review">Set your 2027 targets</a></p></div></div>';
+
   root.innerHTML =
     (state.sample ? '<div class="sample-note"><strong>Sample household loaded</strong> — the Hartono family’s November budget. Edit or delete anything, or press <strong>Reset sample data</strong> to start clean.</div>' : '')
     + '<div class="page-head"><div><h1>Your month at a glance</h1><p class="muted">' + monthLabel(key) + ' · Two incomes, two kids, one plan. Here is where the household stands right now.</p></div>'
@@ -200,6 +216,7 @@ export function renderDashboard(state, root) {
     + envStrip
     + subStrip
     + fcStrip
+    + revStrip
     + (grocList.length ? '<div class="card" style="margin-top:16px"><h2>Groceries &amp; meals <a href="#/grocery">Plan &amp; list →</a></h2><p style="margin-top:0">Dinner is planned for all 7 nights this week. The grocery list stands at <b>' + money(grocToBuy) + ' still to buy</b> — ' + grocLeft + ' of ' + grocList.length + ' items left, ' + money(grocTotal) + ' in total. Tick items off in the store, then post the shop into Transactions with one press.</p></div>' : '');
   drawDonut(root.querySelector('#chart-donut'), slices, 'spent', money0(t.expense));
 }

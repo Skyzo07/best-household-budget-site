@@ -1,6 +1,7 @@
 // Hearth & Home Budget — entrypoint (Node 22, standard library only).
-// v9: dashboard, transactions, budgets, bills & recurring (with a bill
-// calendar), groceries & meals (with staple price history and a
+// v10: dashboard, transactions, budgets, bills & recurring (with a bill
+// calendar and a twelve-month year-at-a-glance grid whose cells jump
+// the month switcher), groceries & meals (with staple price history and a
 // pantry-first auto-plan for next week), household members (one page
 // per person, with banking of unspent allowances into a goal of their
 // choice and a per-member savings-progress card), savings goals,
@@ -11,10 +12,14 @@
 // drill-down), insights and reports — the printable monthly summary
 // plus a debt-payoff planner that compares the snowball and avalanche
 // methods side by side and recommends the cheaper one for this
-// household — and a spending forecast: next month projected per
+// household — a spending forecast: next month projected per
 // category from the six-month trend, with a confidence note per
 // category, a projected month-end, a keep-this-pace yearly figure and
-// the date the emergency fund reaches its target. The ten newer
+// the date the emergency fund reaches its target — and a year in
+// review: the household's 2026 told back as a story from its own
+// figures (best and tightest months, biggest single purchase, top
+// categories, months inside the budget) with three editable 2027
+// targets measured against the pace it actually kept. The eleven newer
 // sections load on demand in the browser, so the first load stays small.
 // Hands the site in: copies app/ and screenshots/ beside this file into
 // /output (or MAKEFUN_OUTPUT_DIR outside the grader) and writes
@@ -22,11 +27,12 @@
 // Totals line measures the first load: index.html + style.css + the four
 // core scripts (data, charts, views, main). bills.js, annual.js,
 // reports.js, debt.js, grocery.js, members.js, savings.js, envelopes.js,
-// subscriptions.js and forecast.js are fetched only when their nav link
+// subscriptions.js, forecast.js and review.js are fetched only when their nav link
 // is opened, so they do not count in the first load. Deterministic:
 // the same input files always produce the same output bytes.
-// v9 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
-// members.js, savings.js, envelopes.js, subscriptions.js and forecast.js.
+// v10 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
+// members.js, savings.js, envelopes.js, subscriptions.js, forecast.js
+// and review.js.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

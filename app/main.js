@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -48,6 +48,7 @@ async function showView(route) {
   if (route === 'subscriptions') (await import('./subscriptions.js')).renderSubscriptions(state, root);
   if (route === 'reports') (await import('./reports.js')).renderReports(state, root);
   if (route === 'forecast') (await import('./forecast.js')).renderForecast(state, root);
+  if (route === 'review') (await import('./review.js')).renderReview(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -63,6 +64,12 @@ async function renderReportsLive() {
 async function renderForecastLive() {
   if (currentRoute() !== 'forecast') return;
   (await import('./forecast.js')).renderForecast(state, $('#view-forecast'));
+}
+
+// Re-render just the Year in review view (used while typing a target).
+async function renderReviewLive() {
+  if (currentRoute() !== 'review') return;
+  (await import('./review.js')).renderReview(state, $('#view-review'));
 }
 
 function persist() { saveState(state); }
@@ -348,6 +355,42 @@ app.addEventListener('click', async (e) => {
       if (!state.forecast || typeof state.forecast !== 'object') state.forecast = { method: 'trend', extra: 0 };
       state.forecast.method = m;
       state.sample = false;
+      persist();
+      rerender();
+    }
+    return;
+  }
+  // ---- Year in review targets (v10) ----
+  const autoTightenBtn = t.closest('[data-review-autotargets]');
+  if (autoTightenBtn) {
+    const review = await import('./review.js');
+    const s = review.reviewSummary(state);
+    if (!state.review2027 || typeof state.review2027 !== 'object') state.review2027 = { save: 0, groceries: 0, dining: 0 };
+    state.review2027.save = Math.round(s.paceSave * 1.05);
+    state.review2027.groceries = Math.round(s.paceGroceries * 0.95);
+    state.review2027.dining = Math.round(s.paceDining * 0.9);
+    state.sample = false;
+    persist();
+    rerender();
+    window.alert('Targets tightened: save ' + money(state.review2027.save) + ' a month, groceries ' + money(state.review2027.groceries) + ', dining out ' + money(state.review2027.dining) + ' — measured from this year’s own pace.');
+    return;
+  }
+  if (t.closest('[data-review-reset]')) {
+    if (!state.review2027 || typeof state.review2027 !== 'object') state.review2027 = { save: 0, groceries: 0, dining: 0 };
+    state.review2027.save = 0;
+    state.review2027.groceries = 0;
+    state.review2027.dining = 0;
+    state.sample = false;
+    persist();
+    rerender();
+    return;
+  }
+  // ---- Bills year grid: jump the month switcher to that month (v10) ----
+  const gotoMonthBtn = t.closest('[data-bill-goto-month]');
+  if (gotoMonthBtn) {
+    const k = gotoMonthBtn.dataset.billGotoMonth;
+    if (/^\d{4}-\d{2}$/.test(k)) {
+      state.currentMonth = k;
       persist();
       rerender();
     }
@@ -820,6 +863,22 @@ app.addEventListener('input', (e) => {
       renderForecastLive();
       const el = document.querySelector('[data-fc-extra]');
       if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+    }
+  }
+  if (t.dataset && t.dataset.reviewTarget !== undefined) {
+    const v = Number(t.value);
+    if (Number.isFinite(v) && v >= 0) {
+      if (!state.review2027 || typeof state.review2027 !== 'object') state.review2027 = { save: 0, groceries: 0, dining: 0 };
+      const which = t.dataset.reviewTarget;
+      if (which === 'save' || which === 'groceries' || which === 'dining') {
+        state.review2027[which] = v;
+        state.sample = false;
+        persist();
+        const pos = t.selectionStart;
+        renderReviewLive();
+        const el = document.querySelector('[data-review-target="' + which + '"]');
+        if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch { /* number inputs have no selection */ } }
+      }
     }
   }
 });

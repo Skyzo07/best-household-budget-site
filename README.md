@@ -20,6 +20,25 @@ account, no server, nothing leaves your browser. Built for the make.fun
   over-budget / almost-there alerts; limits save as you type. Every
   category also carries a six-month spending sparkline against its
   six-month average, so a one-off spike reads differently from a habit.
+- **Year in review** — the household's 2026 told back as a story from
+  its own figures: saved $30,177.76 in 11 months (48.3% of income),
+  best month February ($2,857.00 saved), tightest July ($2,660.00),
+  biggest single purchase School uniforms ($210.00, 16 September),
+  top categories Housing $15,950.00 / Groceries $6,861.85 / Transport
+  $2,692.00, and **11 of 11 months inside the $3,800.00 plan** — with
+  the slack named honestly ($861.61 a month of headroom on average).
+  Then three **2027 targets** the household sets itself — save every
+  month, groceries a month, dining out a month — each one measured
+  live against the pace it actually kept (saving $2,743.43 a month,
+  groceries $639.31, dining $142.66 over the last six months), with
+  "on track" or "behind by $X a month" and what hitting the target
+  frees in a year. "Tighten all three by 5% from this year's pace"
+  sets a stretch that is still reachable because it is measured from
+  what the household already does; "Back to this year's pace" clears
+  the targets. Add a transaction anywhere — a $500 grocery shop makes
+  it the biggest single purchase at once — and the whole story moves.
+  The Dashboard shows the year at a glance with the saving target
+  and the pace beside it.
 - **Bills & recurring** — every regular bill with its due date and a paid
   toggle (paid / overdue / due-in-days), an upcoming-month total, and
   recurring rules that post one real transaction into the current month
@@ -27,7 +46,13 @@ account, no server, nothing leaves your browser. Built for the make.fun
   Pocket-money allowances per person, with spending counted from their own
   tagged transactions. A bill calendar lays the whole month out as a grid,
   one pressable chip per bill on its due day — press a chip to mark that
-  bill paid.
+  bill paid. **Year at a glance:** a twelve-month grid under the calendar —
+  green is every bill paid, gold still has money to pay, grey is not
+  tracked (bill records start in September 2026) or not yet due —
+  and every cell is a button that jumps the month switcher straight to
+  that month. Across the three tracked months so far: $6,748.77 due,
+  $5,601.18 paid, with September the month to finish first ($799.59
+  still to pay).
 - **Subscription audit** — thirteen subscriptions, $204.93 a month
   ($2,459.20 a year), each judged on one question: when did anyone
   last use it? Used in the last 30 days is **Keep**; 31–60 days is
@@ -162,7 +187,8 @@ account, no server, nothing leaves your browser. Built for the make.fun
   store card) and records banked allowances with their destination goal,
   so older saves migrate in place too. v9 adds the forecast settings
   (method + extra saving) and the pantry auto-plan, both defaulted for
-  older saves.
+  older saves. v10 adds the 2027 targets (save / groceries / dining),
+  defaulted to this year's own pace for older saves.
 
 ## Tech
 
@@ -170,12 +196,12 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The ten newer sections are one-job
+  (routing, dialogs, CRUD, export). The eleven newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
-  `bills.js` (bills, recurring rules, allowances, bill calendar),
-  `annual.js` (year overview), `reports.js` (printable summary, debt-payoff
-  planner), `debt.js` (snowball vs avalanche simulation and comparison),
-  `grocery.js` (meal plan, grocery list, pantry, staple price
+  `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
+  glance bill grid), `annual.js` (year overview), `reports.js` (printable
+  summary, debt-payoff planner), `debt.js` (snowball vs avalanche simulation
+  and comparison), `grocery.js` (meal plan, grocery list, pantry, staple price
   history), `members.js` (household members — one page per person, allowance
   history, tagged spending, banking unspent allowances into a chosen goal,
   per-member savings progress), `savings.js` (savings challenges — 52-week,
@@ -184,7 +210,10 @@ account, no server, nothing leaves your browser. Built for the make.fun
   (subscription audit — keep / downgrade / cancel verdicts, totals and
   savings, add / cancel / restore / downgrade), `forecast.js` (spending
   forecast — per-category projections from the six-month trend, confidence
-  notes, projected month-end, yearly pace, emergency-fund date). `favicon.ico` is a hand-drawn
+  notes, projected month-end, yearly pace, emergency-fund date),
+  `review.js` (year in review — best/tightest months, biggest single
+  purchase, top categories, months inside budget, editable 2027 targets
+  measured against this year's pace). `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
@@ -211,10 +240,10 @@ to the output directory and writes `dossier.json` with the vendored
 
 ## Screenshots
 
-- `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips and the new next-month forecast strip (desktop, 1280×800)
-- `screenshots/2-forecast.png` — Forecast: method switch (Trend / 6-month average / Budget plan), projected December income, spending, month-end and 2027 pace (desktop, 1280×800)
-- `screenshots/3-reports.png` — Reports: snowball vs avalanche comparison table and recommendation (desktop, 1280×800)
-- `screenshots/4-grocery-phone.png` — Groceries & meals on a phone (390×844): the pantry auto-plan card for next week — seven dinners, week total, missing ingredients
+- `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip and the new 2026-in-review strip (desktop, 1280×800)
+- `screenshots/2-review.png` — Year in review: 2026 story, biggest single purchase, month-by-month table and the three editable 2027 targets (desktop, 1280×800)
+- `screenshots/3-bills.png` — Bills & recurring: bill calendar plus the new twelve-month year-at-a-glance grid (desktop, 1280×800)
+- `screenshots/4-members-phone.png` — Household members on a phone (390×844): all four members and their allowances
 
 ## License
 

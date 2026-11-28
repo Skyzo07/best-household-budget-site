@@ -370,10 +370,11 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 9,
+    version: 10,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
+    review2027: { save: 0, groceries: 0, dining: 0 },
     budgets,
     goals: [
       { id: 'goal-emergency', name: 'Emergency fund', target: 6000, saved: 4350, date: '2027-06-30' },
@@ -400,7 +401,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV9(parsed);
+    return ensureV10(parsed);
   } catch {
     return sampleState();
   }
@@ -606,6 +607,26 @@ export function subTotals(state, key) {
     totalSaving: round(cancelSaving + downgradeSaving),
     cancelledYearly: round(cancelled.reduce((a, s) => a + subYearly(s), 0)),
   };
+}
+
+export function reviewStore(state) {
+  if (!state.review2027 || typeof state.review2027 !== 'object') state.review2027 = { save: 0, groceries: 0, dining: 0 };
+  for (const k of ['save', 'groceries', 'dining']) {
+    if (typeof state.review2027[k] !== 'number' || state.review2027[k] < 0) state.review2027[k] = 0;
+  }
+  return state.review2027;
+}
+
+// Fill v10 fields into an older saved state so v1–v9 saves keep working.
+// v10 adds the 2027 targets for the year-in-review page (0 = not set yet,
+// the page falls back to this year's own pace). The version bump records
+// that the save has been seen by v10 code.
+export function ensureV10(state) {
+  if (!state) return sampleState();
+  ensureV9(state);
+  reviewStore(state);
+  state.version = 10;
+  return state;
 }
 
 export function ensureV9(state) {

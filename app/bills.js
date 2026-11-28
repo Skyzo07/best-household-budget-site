@@ -124,6 +124,54 @@ export function billCalendar(state, key) {
     + '<p class="muted small">Bills due after today still show as “due in Nd” in the table below; the calendar is the quickest way to see which week of the month carries the most money.</p></div>';
 }
 
+// ---- Year at a glance (v10): twelve months of bills in one grid. ----
+// Each cell is a real button: press it and the month switcher jumps
+// to that month. Months before the first month any bill records a
+// payment for are honest about it — "not tracked" — instead of
+// pretending those bills were missed, and a future month reads
+// "not yet due". Paid months show what was paid against what was due.
+export function billYearGrid(state, key) {
+  const year = key.slice(0, 4);
+  const curMonth = Number(key.slice(5, 7));
+  // The first month any bill records a payment for is where the
+  // household's bill records start; earlier months were never tracked.
+  let firstTracked = null;
+  for (const b of state.bills || []) {
+    for (const m of b.paidMonths || []) {
+      if (!firstTracked || m < firstTracked) firstTracked = m;
+    }
+  }
+  let yearDue = 0, yearPaid = 0, trackedMonths = 0, cleanMonths = 0;
+  const cells = [];
+  for (let m = 1; m <= 12; m++) {
+    const k = year + '-' + String(m).padStart(2, '0');
+    const monthName = monthLabel(k).split(' ')[0];
+    const due = (state.bills || []).reduce((a, b) => a + b.amount, 0);
+    const paidBills = (state.bills || []).filter((b) => (b.paidMonths || []).includes(k));
+    const paid = paidBills.reduce((a, b) => a + b.amount, 0);
+    const unpaid = (state.bills || []).length - paidBills.length;
+    let cls, line;
+    if (m > curMonth) {
+      cls = 'flat';
+      line = 'Not yet due · ' + money(due) + ' due';
+    } else if (firstTracked && k < firstTracked) {
+      cls = 'flat';
+      line = 'Not tracked — records start ' + monthLabel(firstTracked);
+    } else {
+      trackedMonths++;
+      yearDue += due;
+      yearPaid += paid;
+      if (unpaid === 0) { cls = 'ok'; cleanMonths++; line = 'All ' + (state.bills || []).length + ' paid ✓ · ' + money(paid); }
+      else { cls = 'warn'; line = unpaid + ' unpaid · ' + money(due - paid) + ' still to pay'; }
+    }
+    cells.push('<button class="year-cell ' + cls + (k === key ? ' current' : '') + '" data-bill-goto-month="' + k + '" title="Open ' + monthName + ' ' + year + '"><b>' + monthName + '</b><span class="muted">' + line + '</span></button>');
+  }
+  return '<div class="card" style="margin-top:16px"><h2>The whole year of bills — ' + year + '</h2>'
+    + '<p class="muted small" style="margin-top:0">Twelve months, one press each: green is every bill paid, gold still has money to pay, grey is not tracked yet (or not due). Press any month to open it.</p>'
+    + '<div class="year-grid">' + cells.join('') + '</div>'
+    + '<p class="muted small">Across the ' + trackedMonths + ' tracked months so far: ' + money(yearDue) + ' due, ' + money(yearPaid) + ' paid, ' + cleanMonths + ' month' + (cleanMonths === 1 ? '' : 's') + ' with every bill paid. ' + (cleanMonths === trackedMonths && trackedMonths > 0 ? 'Not one bill has been missed since the records began.' : 'The months in gold are the ones to finish first — oldest first, so nothing goes overdue twice.') + '</p></div>';
+}
+
 export function renderBills(state, root) {
   const key = state.currentMonth;
   const totals = billsTotals(state, key);
@@ -182,6 +230,7 @@ export function renderBills(state, root) {
     + '<div class="card kpi"><div class="kpi-label">Recurring not yet posted</div><div class="kpi-value num">' + dueCount + '</div><div class="kpi-sub">' + (dueCount ? 'Press “Post all due” below to write them into Transactions.' : 'Everything due is already in Transactions.') + '</div></div>'
     + '</div>'
     + billCalendar(state, key)
+    + billYearGrid(state, key)
     + '<div class="card" style="margin-top:16px"><h2>Bills due in ' + monthLabel(key) + '</h2>'
     + (bills.length ? '<table><thead><tr><th>Bill</th><th>Due</th><th class="amount">Amount</th><th>Status</th><th></th></tr></thead><tbody>' + billRows + '</tbody></table>'
       : '<p class="empty">No bills yet — add the first one above.</p>')

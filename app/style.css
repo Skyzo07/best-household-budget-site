@@ -61,6 +61,18 @@ main.wrap { padding-top: 14px; padding-bottom: 10px; }
 .grid.kpis { grid-template-columns: repeat(4, 1fr); }
 .grid.two { grid-template-columns: 1.15fr .85fr; }
 .grid.two-even { grid-template-columns: 1fr 1fr; }
+.grid.three { grid-template-columns: repeat(3, 1fr); }
+
+/* ---- year-at-a-glance bill grid (v10) ---- */
+.year-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.year-cell { display: block; width: 100%; text-align: left; border: 1px solid #e3e9e3; border-radius: 10px; padding: 10px 12px; background: #fbfdfb; cursor: pointer; font: inherit; }
+.year-cell:hover { border-color: var(--green); }
+.year-cell.current { outline: 2px solid var(--green); }
+.year-cell b { display: block; font-size: .95rem; }
+.year-cell .muted { font-size: .8rem; }
+.year-cell.ok { background: var(--green-soft); border-color: #bcd8c7; }
+.year-cell.warn { background: var(--gold-soft); border-color: #ecd9a8; }
+.year-cell.flat { background: #f4f6f4; color: #6a736c; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 15px 18px; }
 .card h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .card h2 a { font-size: .85rem; font-weight: 600; text-decoration: none; }
@@ -261,7 +273,8 @@ tr.month-detail td { background: #f4f7f4; font-size: .92rem; }
 /* ---- responsive ---- */
 @media (max-width: 900px) {
   .grid.kpis { grid-template-columns: repeat(2, 1fr); }
-  .grid.two, .grid.two-even { grid-template-columns: 1fr; }
+  .grid.two, .grid.two-even, .grid.three { grid-template-columns: 1fr; }
+  .year-grid { grid-template-columns: repeat(3, 1fr); }
   .goal-grid { grid-template-columns: 1fr 1fr; }
   .mainnav { order: 3; width: 100%; }
   .allow-grid { grid-template-columns: 1fr 1fr; }
