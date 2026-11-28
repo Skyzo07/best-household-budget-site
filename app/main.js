@@ -322,6 +322,17 @@ app.addEventListener('click', async (e) => {
     debtDialog.showModal();
     return;
   }
+  const methodBtn = t.closest('[data-payoff-method]');
+  if (methodBtn) {
+    const m = methodBtn.dataset.payoffMethod;
+    if (m === 'avalanche' || m === 'snowball') {
+      state.payoffMethod = m;
+      state.sample = false;
+      persist();
+      rerender();
+    }
+    return;
+  }
   if (t.id === 'btn-print') { window.print(); return; }
   if (t.id === 'btn-post-due') {
     const bills = await import('./bills.js');
@@ -544,10 +555,15 @@ app.addEventListener('click', async (e) => {
   const bankBtn = t.closest('[data-bank-unspent]');
   if (bankBtn) {
     const members = await import('./members.js');
-    const banked = members.bankUnspent(state, bankBtn.dataset.bankUnspent, state.currentMonth);
+    const goalSel = document.querySelector('[data-bank-goal]');
+    const goalId = goalSel ? goalSel.value : '';
+    const banked = members.bankUnspent(state, bankBtn.dataset.bankUnspent, state.currentMonth, goalId);
     persist();
     rerender();
-    if (banked > 0) window.alert('Banked ' + money(banked) + ' of unspent allowance into the Emergency fund goal.');
+    if (banked > 0) {
+      const g = (state.goals || []).find((x) => x.id === (goalId || 'goal-emergency')) || (state.goals || [])[0];
+      window.alert('Banked ' + money(banked) + ' of unspent allowance into the ' + (g ? g.name : 'savings') + ' goal.');
+    }
     else window.alert('Nothing to bank — this month’s allowance is already spent, or already banked.');
     return;
   }

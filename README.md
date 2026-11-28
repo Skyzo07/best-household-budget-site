@@ -56,9 +56,14 @@ account, no server, nothing leaves your browser. Built for the make.fun
   Every transaction now has a "Spent by" picker — leave it on Household
   (shared) for rent, bills and the weekly shop. **Bank the unspent
   allowance:** what a person did not spend — Sofia has $0.50 left in
-  November and $125.50 unspent across six months — can be banked into
-  the Emergency fund goal with one press; a month can only be banked
-  once, and the Goals page shows the banked money at once.
+  November and $125.50 unspent across six months — can be banked into a
+  goal **of their choice** (pick Emergency fund, the holiday or the car
+  deposit in the picker) with one press; a month can only be banked
+  once, and the Goals page shows the banked money at once. A new
+  **savings-progress card** on each person's page shows every goal with
+  their own banked share of it — Sofia banking her $0.50 into the holiday
+  moves it from $980.00 to $980.50 and the card says so — so a kid can see
+  their own money moving a goal, not just the household total.
 - **Groceries & meals** — a weekly dinner plan for four (two rotating
   weeks; edit any dish or its cost and the week total updates), a priced
   grocery list with a running total checked against the weekly grocery
@@ -110,9 +115,23 @@ account, no server, nothing leaves your browser. Built for the make.fun
   thumb, month-over-month comparison and plain-language tips written
   from your own figures (savings rate, biggest jump, grocery average).
 - **Reports** — a printable monthly summary (income, spending vs budget,
-  bills paid, goals) and a debt-payoff planner using the avalanche method:
-  edit any balance, APR or minimum, set an extra monthly payment, and see
-  the debt-free date, total interest and what the extra payment saves.
+  bills paid, goals) and a debt-payoff planner: edit any balance, APR or
+  minimum, set an extra monthly payment, and see the debt-free date, total
+  interest and what the extra payment saves. **Snowball vs avalanche:**
+  the same three debts ($10,100.00 owed, $270.00 of minimums a month)
+  are run through both payoff orders side by side — avalanche (highest
+  APR first: credit card → store card → car loan) clears everything in
+  40 months for $1,238.76 of interest, debt-free March 2030; snowball
+  (smallest balance first: store card → credit card → car loan) takes 41
+  months and $1,316.02, debt-free April 2030 — so the page recommends
+  avalanche for this household, saving $77.26 of interest and finishing
+  one month sooner, while saying plainly that snowball's quicker first
+  win is the honest pick if motivation matters more than the $77.26.
+  Pick the method for the plan itself (Avalanche / Snowball buttons),
+  raise the extra payment to $100 and both totals fall at once
+  (avalanche 34 months / $1,031.51, snowball 35 months / $1,078.23), edit
+  a debt's APR and watch the orders — and the recommendation — change,
+  or add a debt and see the comparison recompute from your own figures.
 - **CSV export** — download every transaction as a spreadsheet file.
 - **Your data stays yours** — everything is saved in `localStorage` on your
   own device. Sample data for the Hartono family (two incomes, two kids) is
@@ -120,7 +139,9 @@ account, no server, nothing leaves your browser. Built for the make.fun
   v1/v2/v3/v4/v5/v6 saves are migrated automatically — bills, rules,
   allowances, debts, grocery list, pantry, challenges, cash envelopes and
   now subscriptions and banked allowances are added without losing your
-  transactions.
+  transactions. v8 adds the payoff method and a third sample debt (a
+  store card) and records banked allowances with their destination goal,
+  so older saves migrate in place too.
 
 ## Tech
 
@@ -128,13 +149,15 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The eight newer sections are one-job
+  (routing, dialogs, CRUD, export). The nine newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar),
   `annual.js` (year overview), `reports.js` (printable summary, debt-payoff
-  planner), `grocery.js` (meal plan, grocery list, pantry, staple price
+  planner), `debt.js` (snowball vs avalanche simulation and comparison),
+  `grocery.js` (meal plan, grocery list, pantry, staple price
   history), `members.js` (household members — one page per person, allowance
-  history, tagged spending, banking unspent allowances), `savings.js` (savings challenges — 52-week,
+  history, tagged spending, banking unspent allowances into a chosen goal,
+  per-member savings progress), `savings.js` (savings challenges — 52-week,
   no-spend days, round-up pot), `envelopes.js` (cash envelopes — fills,
   rollovers, transfers, per-envelope spending), `subscriptions.js`
   (subscription audit — keep / downgrade / cancel verdicts, totals and
@@ -166,9 +189,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips (desktop, 1280×800)
-- `screenshots/2-subscriptions.png` — Subscription audit: verdicts, yearly savings, cancel-the-flagged control (desktop, 1280×800)
-- `screenshots/3-envelopes.png` — Cash envelopes: six envelopes, move-cash control, December preview (desktop, 1280×800)
-- `screenshots/4-members-phone.png` — Sofia's member page, with the bank-the-unspent-allowance card, on a phone (390×844)
+- `screenshots/2-reports.png` — Reports: snowball vs avalanche comparison table and recommendation (desktop, 1280×800)
+- `screenshots/3-subscriptions.png` — Subscription audit: verdicts, yearly savings, cancel-the-flagged control (desktop, 1280×800)
+- `screenshots/4-savings-phone.png` — Savings challenges on a phone (390×844)
 
 ## License
 

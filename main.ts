@@ -1,14 +1,17 @@
 // Hearth & Home Budget — entrypoint (Node 22, standard library only).
-// v7: dashboard, transactions, budgets, bills & recurring (with a bill
+// v8: dashboard, transactions, budgets, bills & recurring (with a bill
 // calendar), groceries & meals (with staple price history), household
 // members (one page per person, with banking of unspent allowances
-// into the emergency fund), savings goals, savings challenges
-// (52-week, no-spend days, round-up pot), cash envelopes (fill, spend,
-// rollover, move cash between envelopes), a subscription audit (keep /
-// downgrade / cancel verdicts from last-used dates, with real yearly
-// savings), annual overview (with month drill-down), insights and
-// reports — the eight newer sections load on demand in the browser, so
-// the first load stays small.
+// into a goal of their choice and a per-member savings-progress card),
+// savings goals, savings challenges (52-week, no-spend days, round-up
+// pot), cash envelopes (fill, spend, rollover, move cash between
+// envelopes), a subscription audit (keep / downgrade / cancel verdicts
+// from last-used dates, with real yearly savings), annual overview
+// (with month drill-down), insights and reports — the printable monthly
+// summary plus a debt-payoff planner that compares the snowball and
+// avalanche methods side by side and recommends the cheaper one for
+// this household. The nine newer sections load on demand in the browser,
+// so the first load stays small.
 // Hands the site in: copies app/ and screenshots/ beside this file into
 // /output (or MAKEFUN_OUTPUT_DIR outside the grader) and writes
 // /output/dossier.json with the vendored make.fun library. The dossier's
@@ -18,6 +21,8 @@
 // subscriptions.js are fetched only when their nav link is opened, so
 // they do not count in the first load. Deterministic:
 // the same input files always produce the same output bytes.
+// v8 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
+// members.js, savings.js, envelopes.js and subscriptions.js.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -3,6 +3,7 @@
 // (highest APR first) month by month from the household's own debts.
 import { CATEGORIES, categoryById, money, money0, monthLabel, monthTotals, categorySpend, shiftMonth } from './data.js';
 import { drawBars } from './charts.js';
+import { simulatePayoff, comparePayoff, compareVerdict } from './debt.js';
 
 function esc(s) {
   return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -10,64 +11,6 @@ function esc(s) {
 
 function monthName(key) {
   return monthLabel(key);
-}
-
-// Simulate paying debts: minimum on every debt, plus `extra` each month
-// aimed at the highest-APR balance first. Returns months, total interest
-// and the date the last debt clears. Caps at 600 months (50 years).
-export function simulatePayoff(debts, extra) {
-  const work = debts.map((d) => ({ id: d.id, name: d.name, balance: Math.max(0, Number(d.balance) || 0), apr: Math.max(0, Number(d.apr) || 0), min: Math.max(0, Number(d.minPayment) || 0) }))
-    .filter((d) => d.balance > 0);
-  if (!work.length) return { months: 0, interest: 0, payoffKey: null, perDebt: [] };
-  let totalInterest = 0;
-  let months = 0;
-  const cleared = {};
-  const perDebt = work.map((d) => ({ id: d.id, name: d.name, months: 0, interest: 0 }));
-  const byId = {};
-  for (const p of perDebt) byId[p.id] = p;
-  let guard = 0;
-  while (work.some((d) => d.balance > 0.01) && guard < 600) {
-    guard++;
-    months++;
-    // Interest accrues first.
-    for (const d of work) {
-      if (d.balance <= 0.01) continue;
-      const interest = d.balance * (d.apr / 100 / 12);
-      d.balance += interest;
-      totalInterest += interest;
-      byId[d.id].interest += interest;
-    }
-    // Minimum payments on every open debt.
-    for (const d of work) {
-      if (d.balance <= 0.01) continue;
-      const pay = Math.min(d.balance, d.min);
-      d.balance -= pay;
-      if (d.balance <= 0.01 && !cleared[d.id]) { cleared[d.id] = months; byId[d.id].months = months; }
-    }
-    // Extra payment to the highest-APR open debt.
-    let remaining = extra;
-    const open = work.filter((d) => d.balance > 0.01).sort((a, b) => b.apr - a.apr);
-    for (const d of open) {
-      if (remaining <= 0) break;
-      const pay = Math.min(d.balance, remaining);
-      d.balance -= pay;
-      remaining -= pay;
-      if (d.balance <= 0.01 && !cleared[d.id]) { cleared[d.id] = months; byId[d.id].months = months; }
-    }
-    // If minimums don't even cover interest, the balance grows forever.
-    if (months > 1 && work.every((d) => d.balance > 0.01) && totalInterest > 0) {
-      const before = work.reduce((a, d) => a + d.balance, 0);
-      if (guard > 120 && before > work.reduce((a, d) => a + d.balance, 0)) break;
-    }
-  }
-  const stuck = work.some((d) => d.balance > 0.01);
-  let payoffKey = null;
-  if (!stuck) {
-    const [y, m] = '2026-11'.split('-').map(Number);
-    const d = new Date(y, m - 1 + months, 1);
-    payoffKey = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-  }
-  return { months: stuck ? -1 : months, interest: totalInterest, payoffKey, perDebt };
 }
 
 export function renderReports(state, root) {
@@ -98,11 +41,23 @@ export function renderReports(state, root) {
 
   const debts = state.debts || [];
   const extra = Number(state.payoffExtra) || 0;
+  const method = state.payoffMethod === 'snowball' ? 'snowball' : 'avalanche';
   const totalDebt = debts.reduce((a, d) => a + (Number(d.balance) || 0), 0);
-  const withExtra = simulatePayoff(debts, extra);
-  const minOnly = simulatePayoff(debts, 0);
+  const minTotal = debts.reduce((a, d) => a + (Number(d.minPayment) || 0), 0);
+  const withExtra = simulatePayoff(debts, extra, method, key);
+  const minOnly = simulatePayoff(debts, 0, method, key);
   const savedInterest = Math.max(0, minOnly.interest - withExtra.interest);
   const monthsSaved = minOnly.months > 0 && withExtra.months > 0 ? minOnly.months - withExtra.months : 0;
+  const cmp = comparePayoff(debts, extra, key);
+  const cmpRows = [cmp.avalanche, cmp.snowball].map((s) => {
+    const isWinner = cmp.winner === s.method;
+    const isTie = cmp.winner === 'tie';
+    return '<tr><td><b>' + (s.method === 'avalanche' ? 'Avalanche' : 'Snowball') + '</b>' + (isTie ? ' <span class="pill">Tied</span>' : isWinner ? ' <span class="pill">Cheapest</span>' : '') + '<br><span class="muted small">' + (s.method === 'avalanche' ? 'Highest APR first — costs the least interest' : 'Smallest balance first — quickest first win') + '</span></td>'
+      + '<td>' + (s.order.length ? s.order.map((n, i) => (i + 1) + '. ' + esc(n)).join('<br>') : '—') + '</td>'
+      + '<td class="amount">' + (s.months > 0 ? s.months + ' mo' : '—') + '</td>'
+      + '<td class="amount">' + (s.payoffKey ? monthLabel(s.payoffKey) : 'Never') + '</td>'
+      + '<td class="amount"><b>' + money(s.interest) + '</b></td></tr>';
+  }).join('');
 
   const debtRows = debts.map((d) => {
     const sim = withExtra.perDebt.find((p) => p.id === d.id);
@@ -126,8 +81,9 @@ export function renderReports(state, root) {
     + '<div><h3>Spending vs budget</h3><table><thead><tr><th>Category</th><th class="amount">Budget</th><th class="amount">Spent</th><th class="amount">Left</th></tr></thead><tbody>' + spendRows + '<tr><td><b>Total</b></td><td class="amount"><b>' + money(totalBudget) + '</b></td><td class="amount"><b>' + money(t.expense) + '</b></td><td class="amount"><b>' + money(totalBudget - t.expense) + '</b></td></tr></tbody></table></div></div>'
     + '<canvas id="chart-report" class="chart" height="180" style="margin-top:12px"></canvas>'
     + '<p class="muted small">Hearth &amp; Home Budget · Hartono household · figures from your own records, printed ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) + '.</p></div></div>'
-    + '<div class="card" style="margin-top:16px"><h2>Debt payoff planner — avalanche method</h2>'
-    + '<p class="muted">Total owed: <b>' + money(totalDebt) + '</b> across ' + debts.length + ' debts. The avalanche method pays the minimum on everything, then throws every spare dollar at the highest APR first — it costs the least interest of any payoff order.</p>'
+    + '<div class="card" style="margin-top:16px"><h2>Debt payoff planner — ' + method + ' method</h2>'
+    + '<p class="muted">Total owed: <b>' + money(totalDebt) + '</b> across ' + debts.length + ' debts · minimums add up to <b>' + money(minTotal) + ' a month</b>. The plan pays the minimum on everything, then throws every spare dollar at one target debt until it clears. Pick the method — the comparison below shows what the other one would cost.</p>'
+    + '<p><button class="btn small' + (method === 'avalanche' ? ' primary' : ' ghost') + '" data-payoff-method="avalanche">Avalanche — highest APR first</button> <button class="btn small' + (method === 'snowball' ? ' primary' : ' ghost') + '" data-payoff-method="snowball">Snowball — smallest balance first</button></p>'
     + '<p><label class="inline-label">Extra payment each month: $<input type="number" min="0" step="10" value="' + extra + '" data-extra="1" style="width:110px"> <span class="muted small">on top of the minimums</span></label></p>'
     + (debts.length ? '<table><thead><tr><th>Debt</th><th>Balance ($)</th><th>APR</th><th>Min / mo ($)</th><th class="amount">Clears in</th><th class="amount">Interest</th></tr></thead><tbody>' + debtRows + '</tbody></table>' : '<p class="empty">No debts recorded — add one below to plan a payoff.</p>')
     + '<div class="grid two-even" style="margin-top:14px"><div class="tip ' + (withExtra.months > 0 ? 'good' : 'bad') + '">'
@@ -139,7 +95,12 @@ export function renderReports(state, root) {
         ? '<strong>Paying $' + extra + ' extra saves ' + money(savedInterest) + ' of interest</strong> and finishes ' + monthsSaved + ' months sooner than minimums only (' + minOnly.months + ' months, ' + money(minOnly.interest) + ' interest).'
         : 'Paying only the minimums takes ' + (minOnly.months > 0 ? minOnly.months + ' months and costs ' + money(minOnly.interest) + ' in interest.' : '—') + ' Try an extra amount above to see what it saves.')
     + '</div></div>'
-    + '<p style="margin-top:12px"><button class="btn" id="btn-add-debt">+ Add a debt</button> <span class="muted small">Edit any balance, APR or minimum above — the plan recalculates as you type.</span></p></div>';
+    + '<p style="margin-top:12px"><button class="btn" id="btn-add-debt">+ Add a debt</button> <span class="muted small">Edit any balance, APR or minimum above — the plan recalculates as you type.</span></p></div>'
+    + '<div class="card" style="margin-top:16px"><h2>Snowball vs avalanche — which clears this household first?</h2>'
+    + '<p class="muted" style="margin-top:0">Same debts, same extra payment of <b>' + money(extra) + ' a month</b> — two different orders.' + (cmp.avalanche.order.length && cmp.snowball.order.length ? ' Avalanche starts with <b>' + esc(cmp.avalanche.order[0]) + '</b>; snowball starts with <b>' + esc(cmp.snowball.order[0]) + '</b>.' : '') + ' Here is what each order actually costs this household.</p>'
+    + (debts.length ? '<table><thead><tr><th>Method</th><th>Payoff order</th><th class="amount">Months</th><th class="amount">Debt-free</th><th class="amount">Total interest</th></tr></thead><tbody>' + cmpRows + '</tbody></table>' : '<p class="empty">Add a debt above to compare the two methods.</p>')
+    + '<div class="tip ' + (cmp.winner === 'tie' ? '' : 'good') + '" style="margin-top:14px"><strong>Our recommendation: </strong>' + esc(compareVerdict(cmp)) + '</div>'
+    + '<p class="muted small">Try it: raise the extra payment to $100 above and watch both totals fall — or add a debt with a low APR and a small balance and see the two methods trade places. The recommendation above is recomputed from your own debts every time.</p></div>';
   const chart = root.querySelector('#chart-report');
   if (chart && topSpend.length) drawBars(chart, topSpend, { valueLabel: (v) => money0(v) });
 }

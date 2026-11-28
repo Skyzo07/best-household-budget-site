@@ -228,6 +228,7 @@ export function sampleAllowances() {
 export function sampleDebts() {
   return [
     { id: 'debt-card', name: 'Credit card — everyday bank', balance: 1250, apr: 19.9, minPayment: 35 },
+    { id: 'debt-store', name: 'Store card — furniture shop', balance: 450, apr: 12.9, minPayment: 25 },
     { id: 'debt-car', name: 'Car loan — family car', balance: 8400, apr: 6.4, minPayment: 210 },
   ];
 }
@@ -369,7 +370,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 7,
+    version: 8,
     sample: true,
     currentMonth: '2026-11',
     budgets,
@@ -384,6 +385,7 @@ export function sampleState() {
     allowances: sampleAllowances(),
     debts: sampleDebts(),
     payoffExtra: 50,
+    payoffMethod: 'avalanche',
     grocery: { offset: 0, list: sampleGroceryList(), pantry: samplePantry(), overrides: {} },
     challenges: sampleChallenges(),
     subscriptions: sampleSubscriptions(),
@@ -397,7 +399,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV7(parsed);
+    return ensureV8(parsed);
   } catch {
     return sampleState();
   }
@@ -603,6 +605,20 @@ export function subTotals(state, key) {
     totalSaving: round(cancelSaving + downgradeSaving),
     cancelledYearly: round(cancelled.reduce((a, s) => a + subYearly(s), 0)),
   };
+}
+
+// Fill v8 fields into an older saved state so v1–v7 saves keep working.
+// v8 adds the payoff method (avalanche by default) and the third sample
+// debt — a store card — which is what makes the snowball-vs-avalanche
+// comparison a real choice instead of two identical orders. Older saves
+// keep their own debts; only the method is added. The version bump
+// records that the save has been seen by v8 code.
+export function ensureV8(state) {
+  if (!state) return sampleState();
+  ensureV7(state);
+  if (state.payoffMethod !== 'snowball' && state.payoffMethod !== 'avalanche') state.payoffMethod = 'avalanche';
+  state.version = 8;
+  return state;
 }
 
 // Fill v7 fields into an older saved state so v1–v6 saves keep working.
