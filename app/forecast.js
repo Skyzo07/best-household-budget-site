@@ -141,7 +141,7 @@ export function renderForecast(state, root) {
     + '</div></div>'
     + '<div class="card" style="margin-top:16px"><h2>Category by category — ' + monthLabel(s.nextKey) + '</h2>'
     + '<p class="muted small" style="margin-top:0">Six-month average, the projection, and the budget limit side by side. “Steady” means the last six months barely moved, so the projection is worth trusting; “Variable” means the months jumped around, so treat it as a rough guide.</p>'
-    + '<table><thead><tr><th>Category</th><th class="amount">6-mo average</th><th class="amount">Projected</th><th class="amount">Budget</th><th>Confidence</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div class="table-scroll"><table><thead><tr><th>Category</th><th class="amount">6-mo average</th><th class="amount">Projected</th><th class="amount">Budget</th><th>Confidence</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
     + '<p class="muted small">Projected spending ' + money(s.projectedSpend) + ' · projected income ' + money(s.projectedIncome) + ' · projected month-end ' + money(s.projectedSaved) + '. Method: ' + esc(METHOD_LABELS[s.method]) + '. Add a transaction, change a budget, or switch the method above — the whole page recomputes from your own figures.</p></div>';
   const fcCanvas = root.querySelector('#chart-forecast');
   if (fcCanvas && bars.length) drawBars(fcCanvas, bars, { valueLabel: (v) => money0(v) });

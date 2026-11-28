@@ -243,6 +243,11 @@ export function renderTransactions(state, root, filter) {
   if (f.kind !== 'all') list = list.filter((t) => t.kind === f.kind);
   if (f.q) { const q = f.q.toLowerCase(); list = list.filter((t) => (t.description + ' ' + (t.note || '')).toLowerCase().includes(q)); }
   if (typeof f.who === 'string' && f.who !== 'all') list = list.filter((t) => (t.who || '') === f.who);
+  // Date range (v23): from and to are inclusive, and each side only
+  // limits when it is set — a from with no to means "from that day
+  // on", a to with no from means "up to that day".
+  if (typeof f.from === 'string' && f.from) list = list.filter((t) => t.date >= f.from);
+  if (typeof f.to === 'string' && f.to) list = list.filter((t) => t.date <= f.to);
   const t = monthTotals(state, key);
   // What the filters leave behind, added up — so a search for one
   // person or one category answers its own question in dollars.
@@ -256,8 +261,11 @@ export function renderTransactions(state, root, filter) {
     + '<div class="card"><div class="toolbar"><input type="search" id="f-q" placeholder="Search transactions…" value="' + esc(f.q) + '" aria-label="Search transactions">'
     + '<select id="f-cat" aria-label="Filter by category">' + catOptions + '</select>'
     + '<select id="f-kind" aria-label="Filter by type"><option value="all"' + (f.kind === 'all' ? ' selected' : '') + '>Income + expenses</option><option value="income"' + (f.kind === 'income' ? ' selected' : '') + '>Income only</option><option value="expense"' + (f.kind === 'expense' ? ' selected' : '') + '>Expenses only</option></select>'
-    + '<select id="f-who" aria-label="Filter by household member">' + whoOptions + '</select></div>'
-    + '<p class="muted small" style="margin:8px 0 0">Filtered: <b>' + list.length + ' transaction' + (list.length === 1 ? '' : 's') + '</b> · income ' + money(fIncome) + ' · spent ' + money(fExpense) + (f.who === '' ? ' · household (shared) spending — nobody’s pocket money' : (f.who && f.who !== 'all' ? ' · ' + esc((state.allowances || []).find((a) => a.id === f.who)?.who || '') + '’s spending this month' : '')) + '</p>'
+    + '<select id="f-who" aria-label="Filter by household member">' + whoOptions + '</select>'
+    + '<label class="date-filter">From <input type="date" id="f-from" value="' + esc(typeof f.from === 'string' ? f.from : '') + '" aria-label="Show transactions from this date"></label>'
+    + '<label class="date-filter">To <input type="date" id="f-to" value="' + esc(typeof f.to === 'string' ? f.to : '') + '" aria-label="Show transactions up to this date"></label>'
+    + ((f.from || f.to) ? '<button class="btn small ghost" id="btn-clear-dates" type="button">Clear dates</button>' : '') + '</div>'
+    + '<p class="muted small" style="margin:8px 0 0">Filtered: <b>' + list.length + ' transaction' + (list.length === 1 ? '' : 's') + '</b> · income ' + money(fIncome) + ' · spent ' + money(fExpense) + ((f.from || f.to) ? ' · ' + (f.from ? 'from ' + esc(fmtDate(f.from)) : 'from the start') + ' to ' + (f.to ? esc(fmtDate(f.to)) : 'the end of the month') : '') + (f.who === '' ? ' · household (shared) spending — nobody’s pocket money' : (f.who && f.who !== 'all' ? ' · ' + esc((state.allowances || []).find((a) => a.id === f.who)?.who || '') + '’s spending this month' : '')) + '</p>'
     + (list.length ? '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th class="hide-m">Note</th><th class="amount">Amount</th><th></th></tr></thead><tbody>'
       + list.map((tx) => {
           const cat = categoryById(tx.category);

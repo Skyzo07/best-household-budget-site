@@ -20,7 +20,13 @@ account, no server, nothing leaves your browser. Built for the make.fun
   (Maya, Daniel, Sofia, Liam) — and the page adds the filtered list up
   underneath: Sofia's November is 1 transaction, $24.50 spent; the shared
   household is 20 transactions, $2,969.74 spent; search "groceries" still
-  narrows to the 4 weekly shops.
+  narrows to the 4 weekly shops. **Filter by date (v23):** pick a From
+  and a To date and the list — and its income/spent totals — narrow to
+  that stretch of the month: 1–10 November is 14 transactions, $2,606.85
+  spent (rent $1,450.00 on the 1st among them); 8–14 November is 9
+  transactions, $768.54 spent. Either side on its own works too — a From
+  with no To means "from that day on" — and Clear dates puts the whole
+  month back.
 - **Budgets** — a monthly limit per category with live progress bars and
   over-budget / almost-there alerts; limits save as you type. Every
   category also carries a six-month spending sparkline against its
@@ -218,6 +224,29 @@ account, no server, nothing leaves your browser. Built for the make.fun
   for a transaction comes from its own words — the note on the weekly
   shop, the description otherwise — so edit a description on the
   Transactions page and the shop moves.
+- **When we spend (v23)** — the household's spending rhythms, read
+  straight off its own transactions, not typed in. **Spending by
+  weekday:** Monday first, each day with its total, its trips, its
+  average per that weekday and its share — November's everyday spending
+  (rent and utilities left out) runs **Monday $417.70** (3 Mondays,
+  $83.54 a Monday, 29.5% of the month), then Friday $276.15, Tuesday
+  $220.00, Thursday $170.50, Saturday $153.99, Wednesday $99.05 and
+  **Sunday $80.50** — Mondays are driven by Groceries ($355.20 of the
+  $417.70). **Weekend vs weekday:** weekends take **16.5%** of the
+  money ($234.49 of $1,417.89) — $26.05 a weekend day against $56.35 a
+  weekday, so the working week, not the weekend, is where the money
+  goes. **Which week of the month:** week 2 (8–14 November) is the
+  heaviest at **$768.54** — the school fees ($185.00) and two grocery
+  shops land in it — week 1 $535.85, week 3 $113.50, week 4 nothing yet
+  because the month is still running. **Priciest single day: Mon 9 Nov,
+  $206.90** — weekly groceries $168.90 plus bus passes $38.00 — opened
+  transaction by transaction underneath. Three **"What this tells us"**
+  lines are derived live from the same figures, so they move when the
+  transactions do. Two controls re-measure the whole page: the scope
+  (**This month / Last 3 months / All time**) and the switch between
+  **Everyday spending** and **Include rent & bills** — count the rent
+  and the 1st swamps whichever weekday it falls on (Sundays jump to
+  $1,530.50), so the page says plainly which one it is measuring.
 - **Money calendar (v22)** — the whole month on one page, every money
   event plotted on the day it lands, every figure computed live from
   the household's own records. **December 2026: $5,850.00 planned in**
@@ -604,7 +633,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The twenty-two newer sections are one-job
+  (routing, dialogs, CRUD, export). The twenty-three newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -670,7 +699,13 @@ account, no server, nothing leaves your browser. Built for the make.fun
   every payday, bill, auto-save run, debt payment, set-aside,
   subscription renewal, meeting and no-spend day plotted on the day it
   lands, with a day detail that marks bills paid and runs auto-save
-  rules, kind filters, a month switcher and weekly planned totals).
+  rules, kind filters, a month switcher and weekly planned totals),
+  `when.js` (when we spend — spending by weekday, weekend against
+  weekday, which week of the month, the priciest day opened transaction
+  by transaction, and three "what this tells us" lines, all computed
+  live from the household's own transactions, with a scope switch and
+  an everyday-vs-include-rent-and-bills switch that re-measure the
+  whole page).
   The members' monthly report cards live in `members.js` (top category
   and biggest spend per person, counted from their own tagged
   transactions).
@@ -705,9 +740,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-calendar.png` — Money calendar, December 2026: payday Dec 1 ($5,650.00 in), the meeting on Dec 6 open, subscription renewals and bills plotted across the month, kind filters, $5,850.00 planned in against $3,621.37 out (desktop, 1280×800)
-- `screenshots/3-debtfree.png` — Debt-free calendar: $10,100.00 owed, debt-free March 2030 in 40 months for $1,238.76 of interest, the $546.51 the extra buys, avalanche/snowball switch, extra-a-month box and Pay extra this month (desktop, 1280×800)
-- `screenshots/4-members-phone.png` — Maya's page on a phone (390×844), scrolled to her November report card — $52.25 of $150.00, all Dining out, $97.75 left — no horizontal overflow
+- `screenshots/2-when.png` — When we spend, November 2026 everyday: Monday priciest at $417.70, Sunday cheapest at $80.50, weekends 16.5%, week 2 heaviest at $768.54, priciest day Mon 9 Nov $206.90 (desktop, 1280×800)
+- `screenshots/3-calendar.png` — Money calendar, December 2026: payday Dec 1 ($5,650.00 in), the meeting on Dec 6 open, subscription renewals and bills plotted across the month, kind filters, $5,850.00 planned in against $3,621.37 out (desktop, 1280×800)
+- `screenshots/4-forecast-phone.png` — Forecast on a phone (390×844): next month's per-category projections, the projected month-end and the emergency-fund date — no horizontal overflow
 
 ## License
 

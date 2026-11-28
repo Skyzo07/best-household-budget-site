@@ -4,7 +4,7 @@ import { loadState, saveState, sampleState, CATEGORIES, categoryById, meetingFor
 import { renderDashboard, renderTransactions, renderBudgets, renderGoals, renderInsights, setInsightCat } from './views.js';
 
 let state = loadState();
-let txFilter = { q: '', cat: 'all', kind: 'all', who: 'all' };
+let txFilter = { q: '', cat: 'all', kind: 'all', who: 'all', from: '', to: '' };
 let editingTxId = null;
 let editingGoalId = null;
 
@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar', 'when'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'rules', 'reports', 'stores', 'debtfree', 'calendar', 'when']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -61,6 +61,7 @@ async function showView(route) {
   if (route === 'stores') (await import('./stores.js')).renderStores(state, root);
   if (route === 'debtfree') (await import('./debtfree.js')).renderDebtfree(state, root);
   if (route === 'calendar') (await import('./calendar.js')).renderCalendar(state, root);
+  if (route === 'when') (await import('./when.js')).renderWhen(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -97,6 +98,13 @@ async function renderStoresLive() {
 async function renderDebtfreeLive() {
   if (currentRoute() !== 'debtfree') return;
   (await import('./debtfree.js')).renderDebtfree(state, $('#view-debtfree'));
+}
+
+// Re-render just the When we spend view (used after changing the
+// scope or the rent-and-bills switch).
+async function renderWhenLive() {
+  if (currentRoute() !== 'when') return;
+  (await import('./when.js')).renderWhen(state, $('#view-when'));
 }
 
 // Re-render just the Money calendar view (used after picking a day,
@@ -769,6 +777,29 @@ app.addEventListener('click', async (e) => {
     openTxDialog(null);
     const day = cal.calOpenDay();
     if (/^\d{4}-\d{2}-\d{2}$/.test(day)) $('#tx-date').value = day;
+    return;
+  }
+  // ---- When we spend (v23): scope buttons and the rent-and-bills
+  // switch re-measure the whole page from the same transactions. ----
+  const whenScopeBtn = t.closest('[data-when-scope]');
+  if (whenScopeBtn) {
+    const w = await import('./when.js');
+    w.setWhenScope(whenScopeBtn.dataset.whenScope);
+    renderWhenLive();
+    return;
+  }
+  const whenFixedBtn = t.closest('[data-when-fixed]');
+  if (whenFixedBtn) {
+    const w = await import('./when.js');
+    w.setWhenFixed(whenFixedBtn.dataset.whenFixed === 'true');
+    renderWhenLive();
+    return;
+  }
+  // ---- Transactions date range (v23): clear both dates. ----
+  if (t.id === 'btn-clear-dates') {
+    txFilter.from = '';
+    txFilter.to = '';
+    rerender();
     return;
   }
   // ---- Bills: pay all due (v20) — one press, one confirm, every
@@ -1494,6 +1525,15 @@ app.addEventListener('change', (e) => {
     return;
   }
   if (e.target.id === 'f-cat' || e.target.id === 'f-kind' || e.target.id === 'f-who') rerender();
+  // Transactions date range (v23): a date only counts when it is a
+  // real date; an empty box means "no limit on that side".
+  if (e.target.id === 'f-from' || e.target.id === 'f-to') {
+    const v = e.target.value;
+    if (e.target.id === 'f-from') txFilter.from = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
+    else txFilter.to = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : '';
+    rerender();
+    return;
+  }
   if (e.target.dataset && e.target.dataset.envFill) { rerender(); return; }
   if (e.target.dataset && e.target.dataset.grocCheck) {
     const item = state.grocery && state.grocery.list.find((x) => x.id === e.target.dataset.grocCheck);

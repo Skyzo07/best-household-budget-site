@@ -19,7 +19,7 @@
 // review: the household's 2026 told back as a story from its own
 // figures (best and tightest months, biggest single purchase, top
 // categories, months inside the budget) with three editable 2027
-// targets measured against the pace it actually kept. The nineteen newer
+// targets measured against the pace it actually kept. The twenty newer
 // sections load on demand in the browser, so the first load stays small.
 // Hands the site in: copies app/ and screenshots/ beside this file into
 // /output (or MAKEFUN_OUTPUT_DIR outside the grader) and writes
@@ -28,7 +28,8 @@
 // core scripts (data, charts, views, main). bills.js, annual.js,
 // reports.js, debt.js, grocery.js, members.js, savings.js, envelopes.js,
 // subscriptions.js, forecast.js and review.js are fetched only when their nav link
-// is opened, so they do not count in the first load. Deterministic:
+// is opened, so they do not count in the first load. v23 adds when.js
+// to that lazy list: when we spend, the spending rhythms page. Deterministic:
 // the same input files always produce the same output bytes.
 // v13 lazy files: bills.js, annual.js, reports.js, debt.js, grocery.js,
 // members.js, savings.js, envelopes.js, subscriptions.js, forecast.js,
@@ -203,6 +204,23 @@
 // Calendar (December), Members (Maya) and Debt-free. One fix during
 // the run: calendar.js first imported autosaveStore from autosave.js,
 // which does not export it — it lives in data.js.
+// v23 adds when.js (lazy too): when we spend — spending rhythms read
+// straight off the household's own transactions: spending by weekday
+// (Monday first, with trips, average per that weekday and share),
+// weekend against weekday, which week of the month carries the money,
+// the single priciest day opened transaction by transaction, and three
+// "what this tells us" lines derived live from the same figures —
+// November 2026 everyday: Monday priciest at $417.70 (Groceries
+// $355.20 of it), Sunday cheapest at $80.50, weekends 16.5% of the
+// money, week 2 heaviest at $768.54, priciest day Mon 9 Nov $206.90 —
+// with a scope switch (this month / last 3 months / all time) and an
+// everyday-vs-include-rent-and-bills switch that re-measure the whole
+// page; plus a date-range filter on Transactions (from/to date inputs
+// that filter the list and its income/spent totals, with a Clear dates
+// button). First load 6 files, target ≤ ~68 KB; later by import() 24
+// files (when.js lazy); whole app 31 files. Verified:
+// /tmp/bhb-v23-verify.mjs, 0 JS errors, 0 external requests; phone
+// scrollWidth 390 on When we spend and Forecast.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
