@@ -543,6 +543,27 @@ export function meetingForMonth(state, key) {
   return m;
 }
 
+// Fill v18 fields into an older saved state so v1–v17 saves keep working.
+// v18 adds the adopted next-month plan record (null = no plan adopted
+// yet, the page falls back to a fresh suggestion). The version bump
+// records that the save has been seen by v18 code.
+export function ensureV18(state) {
+  if (!state) return sampleState();
+  ensureV17(state);
+  if (!('nextmonth' in state) || (state.nextmonth !== null && typeof state.nextmonth !== 'object')) state.nextmonth = null;
+  state.version = 18;
+  return state;
+}
+
+// The adopted next-month plan, if one exists — the month it was made
+// for, the budgets and envelope fills it wrote, and the budgets and
+// fills that were there before, so Undo can put it all back. Null
+// until the household adopts a plan.
+export function nextmonthStore(state) {
+  if (!('nextmonth' in state) || (state.nextmonth !== null && typeof state.nextmonth !== 'object')) state.nextmonth = null;
+  return state.nextmonth;
+}
+
 // Fill v17 fields into an older saved state so v1–v16 saves keep working.
 // v17 adds the monthly money meeting records (empty = no meeting held
 // yet, the page falls back to the November seed). The version bump
@@ -612,7 +633,7 @@ export function sampleState() {
   const budgets = {};
   for (const c of CATEGORIES) if (c.budget > 0) budgets[c.id] = c.budget;
   return {
-    version: 17,
+    version: 18,
     sample: true,
     currentMonth: '2026-11',
     forecast: { method: 'trend', extra: 0 },
@@ -639,6 +660,10 @@ export function sampleState() {
     bigbuys: sampleBigBuys(),
     autosave: sampleAutoSave(),
     meetings: sampleMeetings(),
+    // Next month's plan (v18): the adopted December plan, if any —
+    // the budgets and envelope fills it wrote, and what they were
+    // before, so Undo puts it all back. Null until a plan is adopted.
+    nextmonth: null,
     // Banked unspent allowance (v15): what each person already moved
     // into savings — Maya $145, Daniel $40, Sofia $15, Liam $10, $210
     // between them, all into the emergency fund. The emergency fund's
@@ -662,7 +687,7 @@ export function loadState() {
     if (!raw) return sampleState();
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.transactions)) return sampleState();
-    return ensureV17(parsed);
+    return ensureV18(parsed);
   } catch {
     return sampleState();
   }

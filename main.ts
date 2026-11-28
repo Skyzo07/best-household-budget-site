@@ -19,7 +19,7 @@
 // review: the household's 2026 told back as a story from its own
 // figures (best and tightest months, biggest single purchase, top
 // categories, months inside the budget) with three editable 2027
-// targets measured against the pace it actually kept. The eleven newer
+// targets measured against the pace it actually kept. The nineteen newer
 // sections load on demand in the browser, so the first load stays small.
 // Hands the site in: copies app/ and screenshots/ beside this file into
 // /output (or MAKEFUN_OUTPUT_DIR outside the grader) and writes
@@ -112,6 +112,25 @@
 // 48,079 bytes gzip-9 (target ≤ ~56 KB); later by import() 18 files,
 // 93,484 bytes gzip-9 (meeting.js 7,988 lazy); whole app 25 files,
 // 493,907 bytes. Verified: /tmp/bhb-v17-verify.mjs, 123/123 checks
+// PASS, 0 JS errors, 0 external requests.
+// v18 adds nextmonth.js (lazy too): a plan for next month built from
+// this month's own figures — suggested budgets per category (trimmed
+// to what the month actually spent, kept when they already fit,
+// raised to cover an overrun), envelope fills for next month (those
+// suggested budgets plus whatever rolled over unspent), the bills
+// due, the big purchases coming up, the auto-save runs already
+// scheduled, and the 52-week challenge's next week — with an "Adopt
+// this plan" that writes the suggested budgets and fills into the
+// real data (Budgets and Envelopes already show them) and an Undo
+// that puts the old figures back exactly; plus price alerts on the
+// Groceries page (the staples up more than 5% since September, each
+// with its cheapest store and what it costs on this week's list) and
+// a phone-layout fix (grid items may shrink below their content, so
+// two-column cards stack instead of stretching the page past 390px,
+// and wide tables scroll inside their cards). v18 first load: 6 files,
+// 48,794 bytes gzip-9 (target ≤ ~58 KB); later by import() 19 files,
+// 101,007 bytes gzip-9 (nextmonth.js 6,953 lazy); whole app 26 files,
+// 523,787 bytes. Verified: /tmp/bhb-v18-verify.mjs, 104/104 checks
 // PASS, 0 JS errors, 0 external requests.
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

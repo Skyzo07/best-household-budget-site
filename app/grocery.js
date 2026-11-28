@@ -244,9 +244,27 @@ export function renderGrocery(state, root) {
   const basketNov = PRICE_HISTORY.reduce((a, p) => a + p.nov, 0);
   const basketUp = basketNov - basketSep;
   const basketPct = (basketUp / basketSep) * 100;
+  // ---- Price alerts (v18): staples that rose more than 5% since
+  // September, each with its cheapest store and what it costs on
+  // this week's list — so the household can switch the shop for
+  // that staple instead of paying the rise at one store.
+  const risers = PRICE_HISTORY.filter((p) => (p.nov - p.sep) / p.sep > 0.05)
+    .sort((a, b) => ((b.nov - b.sep) / b.sep) - ((a.nov - a.sep) / a.sep));
+  const alertRows = risers.map((p) => {
+    const pct = ((p.nov - p.sep) / p.sep) * 100;
+    const rise = Math.round((p.nov - p.sep) * 100) / 100;
+    const onList = (grocery.list || []).find((i) => i.name === p.name && !i.checked);
+    const bought = !onList && (grocery.list || []).find((i) => i.name === p.name && i.checked);
+    return '<div class="mt-row"><span class="mt-ico flag">↑</span><div class="mt-body"><b>' + esc(p.name) + ' — up ' + pct.toFixed(1) + '% since September (' + money(p.sep) + ' → ' + money(p.nov) + ', +' + money(rise) + ' each)</b><span>Cheapest at ' + esc(p.store) + ' — buy this staple there, not at the one-stop shop.' + (onList ? ' On this week’s list: ' + onList.qty + ' × ' + money(onList.price) + ' = ' + money(Math.round(onList.qty * onList.price * 100) / 100) + '.' : bought ? ' Already bought this week (' + bought.qty + ' × ' + money(bought.price) + ').' : ' Not on this week’s list.') + '</span></div></div>';
+  }).join('');
+  const alertCard = risers.length
+    ? '<div class="card" style="margin-top:16px"><h2>Price alerts — ' + risers.length + ' staples up more than 5% since September</h2>'
+      + '<p class="muted small" style="margin-top:0">Every staple below costs at least 5% more than it did in September — ' + esc(risers[0].name) + ' most of all, up ' + (((risers[0].nov - risers[0].sep) / risers[0].sep) * 100).toFixed(1) + '%. The switch is simple: buy each one at the store that has it cheapest instead of buying everything at one store — the basket at each staple’s cheapest store runs about ' + money(Math.round(basketNov * 0.04 * 100) / 100) + ' a week cheaper than the one-stop shop.</p>'
+      + alertRows + '</div>'
+    : '';
   const priceCard = '<div class="card" style="margin-top:16px"><h2>Staple prices — what things actually cost</h2>'
     + '<p class="muted small" style="margin-top:0">The eight staples this household buys every week, priced September → November 2026. The November price is the one on the grocery list above — the table and the list always agree. The cheapest month for each staple is in green; “Add at $…” puts it on the list at this month’s price.</p>'
-    + '<table><thead><tr><th>Staple</th><th class="amount">Sep</th><th class="amount">Oct</th><th class="amount">Nov</th><th class="amount">Since Sep</th><th>Cheapest store</th><th></th></tr></thead><tbody>' + priceRows + '</tbody></table>'
+    + '<div class="table-scroll"><table><thead><tr><th>Staple</th><th class="amount">Sep</th><th class="amount">Oct</th><th class="amount">Nov</th><th class="amount">Since Sep</th><th>Cheapest store</th><th></th></tr></thead><tbody>' + priceRows + '</tbody></table></div>'
     + '<p class="muted small">The whole basket of eight costs <b>' + money(basketNov) + '</b> in November, against ' + money(basketSep) + ' in September — up ' + money(basketUp) + ' (' + basketPct.toFixed(1) + '%) in two months. Eggs climbed fastest (+10.2%); salmon the least (+4.9%). Shopping the cheapest store per staple instead of one store for everything saves roughly ' + money(Math.round(basketNov * 0.04 * 100) / 100) + ' a week on this basket alone.</p></div>';
 
   // Next week's auto-plan, when one exists: the seven pantry dinners,
@@ -281,7 +299,7 @@ export function renderGrocery(state, root) {
     + '</div>'
     + '<div class="grid two"><div class="card"><h2>' + weekLabel(offset) + ' — dinners</h2>'
     + '<p class="muted small" style="margin-top:0">Dinner for four, every night. Edit a dish or its cost — the week total updates as you type.</p>'
-    + '<table><thead><tr><th>Day</th><th>Dinner</th><th class="amount">Cost</th></tr></thead><tbody>' + mealRows + '</tbody></table>'
+    + '<div class="table-scroll"><table><thead><tr><th>Day</th><th>Dinner</th><th class="amount">Cost</th></tr></thead><tbody>' + mealRows + '</tbody></table></div>'
     + '<p class="muted small">Week total <b>' + money(weekCost) + '</b> for 7 dinners · ' + money(weekCost / 4) + ' per person for the week. '
     + 'A home-cooked dinner here averages ' + money0(weekCost / 7) + '; the household’s dining-out average is about $46 a visit.</p>'
     + '<p><button class="btn small ghost" data-week="-1">‹ Previous week</button> <button class="btn small ghost" data-week="1">Next week ›</button> <button class="btn small" data-auto-plan>Plan next week from the pantry</button></p></div>'
@@ -294,6 +312,7 @@ export function renderGrocery(state, root) {
     + '<div class="card" style="margin-top:16px"><h2>Pantry staples</h2><p class="muted small" style="margin-top:0">The cupboard, at a glance. “Add to list” puts a restock on the grocery list at its usual price — no re-typing, no forgotten oil.</p>'
     + '<ul class="tx-list">' + pantryRows + '</ul>'
     + '<p class="muted small">Tip: shop the list once a week instead of topping up daily. Groceries averaged ' + money(groceryAvg3(state, key)) + ' a month over the last three months — one big shop a week, planned from the dinners above, is where the saving hides.</p></div>'
+    + alertCard
     + priceCard;
 }
 

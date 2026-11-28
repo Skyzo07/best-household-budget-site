@@ -14,7 +14,7 @@ const app = $('#app');
 function currentRoute() {
   const h = location.hash.replace(/^#\/?/, '');
   const base = h.split('/')[0];
-  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'reports'].includes(base) ? base : 'dashboard';
+  return ['transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'reports'].includes(base) ? base : 'dashboard';
 }
 
 // Person id from a #/members/<id> hash, or '' on the members overview.
@@ -25,7 +25,7 @@ function currentMemberId() {
 }
 
 async function showView(route) {
-  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'reports']) {
+  for (const name of ['dashboard', 'transactions', 'budgets', 'bills', 'grocery', 'members', 'goals', 'savings', 'envelopes', 'subscriptions', 'annual', 'insights', 'forecast', 'review', 'networth', 'whatif', 'checkin', 'bigbuys', 'streaks', 'autosave', 'meeting', 'nextmonth', 'reports']) {
     $('#view-' + name).hidden = name !== route;
   }
   for (const a of document.querySelectorAll('[data-nav]')) {
@@ -56,6 +56,7 @@ async function showView(route) {
   if (route === 'streaks') (await import('./streaks.js')).renderStreaks(state, root);
   if (route === 'autosave') (await import('./autosave.js')).renderAutosave(state, root);
   if (route === 'meeting') (await import('./meeting.js')).renderMeeting(state, root);
+  if (route === 'nextmonth') (await import('./nextmonth.js')).renderNextmonth(state, root);
   window.scrollTo(0, 0);
 }
 
@@ -65,6 +66,12 @@ function rerender() { showView(currentRoute()); }
 async function renderMeetingLive() {
   if (currentRoute() !== 'meeting') return;
   (await import('./meeting.js')).renderMeeting(state, $('#view-meeting'));
+}
+
+// Re-render just the Next month view (used after adopting or undoing).
+async function renderNextmonthLive() {
+  if (currentRoute() !== 'nextmonth') return;
+  (await import('./nextmonth.js')).renderNextmonth(state, $('#view-nextmonth'));
 }
 
 // Re-render just the Reports view (used while typing in the payoff planner).
@@ -598,6 +605,26 @@ app.addEventListener('click', async (e) => {
     else window.alert('That rule is missing something — give it a name, pick a destination, and (for a fixed rule) an amount above $0.');
     return;
   }
+  // ---- Next month plan (v18): adopt, undo, print ----
+  if (t.closest('[data-nm-adopt]')) {
+    const nm = await import('./nextmonth.js');
+    const res = nm.adoptNextmonth(state);
+    persist();
+    rerender();
+    if (res.adopted) window.alert('Plan adopted for ' + monthLabel(res.plan.nextKey) + ' — budgets now total ' + money(res.plan.newTotal) + ' (was ' + money(res.plan.oldTotal) + '), and ' + monthLabel(res.plan.nextKey) + '’s envelope fills are ' + money(res.plan.envTotal) + '. The Budgets and Envelopes pages already show it — Undo puts it all back.');
+    else window.alert('That plan is already adopted — the budgets and fills are already in place.');
+    return;
+  }
+  if (t.closest('[data-nm-undo]')) {
+    const nm = await import('./nextmonth.js');
+    if (nm.undoNextmonth(state)) {
+      persist();
+      rerender();
+      window.alert('Undone — the budgets and envelope fills are back where they were before the plan.');
+    }
+    return;
+  }
+  if (t.closest('[data-nm-print]')) { window.print(); return; }
   // ---- Monthly money meeting (v17): decisions, done, reopen ----
   const mtDecideBtn = t.closest('[data-mt-decide]');
   if (mtDecideBtn) {

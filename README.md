@@ -138,6 +138,34 @@ account, no server, nothing leaves your browser. Built for the make.fun
   $25,000.00 needs $4,922.24, landing January 2027 at the pace kept).
   The subscription audit's $491.34 a year is named as one more win on
   the table, with a link to the audit.
+- **Next month (v18)** — a plan for December 2026 written from November's
+  own figures, and nothing else. **Suggested budgets:** eight categories
+  trimmed to what the month actually used (transport $320.00 → $140.00,
+  dining $240.00 → $140.00, utilities $260.00 → $200.00, health, fun,
+  kids, shopping, other), two kept (housing $1,450.00, groceries $620.00
+  — 65 cents of slack, so it stays), none raised — planned spending
+  $3,090.00 against $3,800.00 now, **$710.00 of budget freed**, projected
+  saving **$2,760.00 (47.2% of the $5,850.00 coming in)**. **Envelope
+  fills for December:** each envelope's suggested budgets plus whatever
+  rolled over unspent — transport $326.00 ($186.00 rolled over, the
+  biggest), dining $242.45, groceries $620.65 — **$1,926.61 of cash in
+  envelopes** on the 1st. **Bills due:** all ten, $2,249.59, with
+  $1,934.60 on auto-pay and $314.99 to pay by hand. **Coming up:** the
+  school fees are nearest (31 January 2027, $240.00 to go, $80.00 a
+  month) and the four big purchases need $437.00 a month between them;
+  the 52-week challenge's week 21 ($21.00) and the money meeting on
+  Dec 6, 2026 are on the calendar too. **Auto-save runs scheduled:**
+  $230.00 moves on payday, Dec 1 ($100.00 emergency fund, $80.00
+  washing machine, $50.00 car deposit) and the round-ups sweep on
+  Dec 31 (November's round-ups so far: $5.51). **Adopt this plan**
+  writes the suggested budgets into Budgets and the suggested fills into
+  Envelopes for December — the pages already show it — and **Undo**
+  puts the old budgets and fills back exactly; adopting twice does
+  nothing the second time. The year line is honest about what the plan
+  is worth: twelve months of it puts away $33,120.00, against the
+  $30,177.76 actually saved in the first eleven months of 2026, and
+  the emergency fund ($4,350.00 of $6,000.00) reaches its target in
+  about 17 months at the payday pace alone.
 - **Monthly money meeting (v17)** — once a month, around the table. The
   page builds the agenda itself from the household's own records: six
   wins (11 of 11 months inside the $3,800.00 plan, net worth positive
@@ -309,6 +337,16 @@ account, no server, nothing leaves your browser. Built for the make.fun
   the one on the grocery list, so table and list always agree; “Add at $…”
   puts any staple on the list at this month’s price. The eight-staple
   basket costs $65.85 in November, up $3.75 (+6.0%) since September.
+  **Price alerts (v18):** the seven staples that rose more than 5%
+  since September get their own card — eggs most of all, up 10.2%
+  ($5.90 → $6.50 a dozen, +$0.60), then bread (+7.4%), butter (+6.5%),
+  milk (+6.3%), beef mince (+6.0%), cheddar (+5.5%) and chicken
+  (+5.4%); salmon (+4.9%) is not flagged. Each alert names its
+  cheapest store and what it costs on this week's list (eggs were
+  already bought, 1 × $6.50; the chicken is still to buy, 1 × $13.60),
+  and the switch is spelled out: buy each staple at its cheapest
+  store instead of everything at one store and the basket runs about
+  $2.63 a week cheaper.
   **Plan next week from the pantry:** one press writes seven dinners
   built from cupboard staples (bean chilli, lentil curry, pasta bake,
   pizza night, salmon, roast chicken…) into next week’s plan, shows
@@ -410,6 +448,10 @@ account, no server, nothing leaves your browser. Built for the make.fun
   older saves. v16 adds the auto-save rules (four sample rules) and the
   auto-pay switch on every bill (off for older saves — a bill only pays
   itself when the household switches it on), both defaulted for older saves.
+  v17 adds the monthly money meeting records (one per month: decisions,
+  notes, done date, next date), defaulted for older saves. v18 adds the
+  adopted next-month plan record (the budgets and fills it wrote, and what
+  they were before, so Undo can put them back), defaulted for older saves.
 
 ## Tech
 
@@ -417,7 +459,7 @@ account, no server, nothing leaves your browser. Built for the make.fun
   split by job: `data.js` (categories, sample data, month maths, storage,
   cash-envelope maths), `charts.js` (hand-drawn canvas donut / bars / trend),
   `views.js` (dashboard, transactions, budgets, goals, insights), `main.js`
-  (routing, dialogs, CRUD, export). The sixteen newer sections are one-job
+  (routing, dialogs, CRUD, export). The eighteen newer sections are one-job
   files loaded only when opened, so they stay out of the first load:
   `bills.js` (bills, recurring rules, allowances, bill calendar, year-at-a-
   glance bill grid), `annual.js` (year overview), `reports.js` (printable
@@ -455,12 +497,23 @@ account, no server, nothing leaves your browser. Built for the make.fun
   `autosave.js` (auto-save rules — payday moves into a goal or a big
   purchase's pot, month-end round-up sweeps into a goal, next-run dates
   worked out from today, a per-rule monthly ledger, run-now / run-all /
-  pause / add / delete, all moving real money).
+  pause / add / delete, all moving real money), `meeting.js` (monthly
+  money meeting — wins and flags computed live from the household's own
+  figures, decisions that do real work when the household says yes,
+  notes that save as you type, mark-done and the next meeting on the
+  first Sunday of next month), `nextmonth.js` (next month's plan —
+  suggested budgets from this month's spend, envelope fills from those
+  budgets plus rollovers, bills due, big purchases coming up, auto-save
+  runs scheduled, with Adopt that writes the plan into the budgets and
+  envelopes and Undo that puts it back).
   `favicon.ico` is a hand-drawn
   16×16 house icon, served locally like everything else.
 - Zero network requests at runtime: no CDN, no web fonts, no tracking.
   Charts are drawn with plain Canvas 2D; icons are text glyphs.
-- Responsive: desktop layout and a phone layout (390 px).
+- Responsive: desktop layout and a phone layout (390 px). Wide tables
+  scroll sideways inside their cards instead of stretching the page,
+  and grid items shrink below their content width so two-column cards
+  stack cleanly on a phone (v18).
 
 ## Run it locally
 
@@ -484,9 +537,9 @@ to the output directory and writes `dossier.json` with the vendored
 ## Screenshots
 
 - `screenshots/1-dashboard.png` — Dashboard, incl. the envelopes and subscription-audit strips, the next-month forecast strip, the 2026-in-review strip and the new net-worth strip (desktop, 1280×800)
-- `screenshots/2-meeting.png` — Monthly money meeting: $5,850.00 in for November, 0 of 8 decisions made, 6 wins and 5 flags, and the first decisions — cancel Duolingo Plus ($155.88 a year) and National Geographic ($83.88 a year) (desktop, 1280×800)
-- `screenshots/3-reports.png` — Reports, scrolled to the monthly statement: all 23 November transactions in order with a running balance ending at $2,791.51 saved, spending by category, and the sign-off line (desktop, 1280×800)
-- `screenshots/4-budgets-phone.png` — Budgets on a phone (390×844): the nav, the month switcher and the category bars in the phone layout
+- `screenshots/2-nextmonth.png` — Next month — December 2026: $5,850.00 in, planned spending $3,090.00 ($710.00 of budget freed), projected saving $2,760.00, bills due $2,249.59, and the Adopt this plan button (desktop, 1280×800)
+- `screenshots/3-meeting.png` — Monthly money meeting: $5,850.00 in for November, 0 of 8 decisions made, 6 wins and 5 flags (desktop, 1280×800)
+- `screenshots/4-grocery-phone.png` — Groceries & meals on a phone (390×844), scrolled to the price alerts: 7 staples up more than 5% since September, eggs up 10.2% at SuperMart
 
 ## License
 
